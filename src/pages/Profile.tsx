@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Settings, Bell, Mail, Upload, Save, Check, BarChart2, CalendarCheck } from "lucide-react";
+import { User, Settings, Bell, Mail, Upload, Save, Check, BarChart2, CalendarCheck, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 

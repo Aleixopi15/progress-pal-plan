@@ -185,7 +185,7 @@ export default function Goals() {
       >
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-trigger="goal-dialog">
               <Plus className="mr-2 h-4 w-4" /> 
               Nova Meta
             </Button>
@@ -570,7 +570,7 @@ export default function Goals() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Crie sua primeira meta de estudo para começar a acompanhar seu progresso.
                     </p>
-                    <Button className="mt-4" onClick={() => document.querySelector('[role="dialog"]')?.focus()}>
+                    <Button className="mt-4" onClick={() => document.querySelector('[data-trigger="goal-dialog"]')?.dispatchEvent(new Event('click'))}>
                       <Plus className="mr-2 h-4 w-4" />
                       Nova Meta
                     </Button>
@@ -688,7 +688,7 @@ export default function Goals() {
                             } para começar.`
                         }
                       </p>
-                      <Button className="mt-4" onClick={() => document.querySelector('[role="dialog"]')?.focus()}>
+                      <Button className="mt-4" onClick={() => document.querySelector('[data-trigger="goal-dialog"]')?.dispatchEvent(new Event('click'))}>
                         <Plus className="mr-2 h-4 w-4" />
                         Nova Meta
                       </Button>

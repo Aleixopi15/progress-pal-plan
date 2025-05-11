@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
@@ -127,7 +126,7 @@ export default function Calendar() {
       >
         <Dialog>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-trigger="dialog">
               <Plus className="mr-2 h-4 w-4" /> 
               Nova Sessão
             </Button>
@@ -309,7 +308,7 @@ export default function Calendar() {
                     <p className="text-sm text-muted-foreground mt-1">
                       Não há sessões de estudo agendadas para esta data.
                     </p>
-                    <Button className="mt-4" onClick={() => document.querySelector('[data-trigger="dialog"]')?.click()}>
+                    <Button className="mt-4" onClick={() => document.querySelector('[data-trigger="dialog"]')?.dispatchEvent(new Event('click'))}>
                       <Plus className="h-4 w-4 mr-2" />
                       Agendar Sessão
                     </Button>
