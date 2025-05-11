@@ -77,9 +77,9 @@
   body {
     @apply bg-background text-foreground font-sans;
   }
-
-  .animate-fade-in {
-    @apply animate-fade-in;
-  }
 }
 
+/* Remove the circular dependency by directly using the animation class instead of @apply */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
