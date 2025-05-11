@@ -241,7 +241,7 @@ export default function Goals() {
                   </Label>
                   <Select 
                     onValueChange={(value) => setNewGoal({ ...newGoal, subject: value })}
-                    value={newGoal.subject}
+                    value={newGoal.subject || ""}
                   >
                     <SelectTrigger className="col-span-3">
                       <SelectValue placeholder="Selecione a matéria" />
@@ -703,3 +703,4 @@ export default function Goals() {
     </div>
   );
 }
+
