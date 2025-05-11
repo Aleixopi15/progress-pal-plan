@@ -59,7 +59,7 @@ export function Sidebar({ className }: SidebarProps) {
   });
 
   const navItems = [
-    { href: "/", icon: Home, label: "Dashboard" },
+    { href: "/dashboard", icon: Home, label: "Dashboard" },
     { href: "/calendar", icon: Calendar, label: "Cronograma" },
     { href: "/progress", icon: BarChart2, label: "Progresso" },
     { href: "/goals", icon: Target, label: "Metas" },
@@ -78,7 +78,7 @@ export function Sidebar({ className }: SidebarProps) {
     >
       <div className="flex h-14 items-center justify-between border-b px-3">
         {!isCollapsed && (
-          <Link to="/" className="font-semibold text-lg">
+          <Link to="/dashboard" className="font-semibold text-lg">
             StudyPlan
           </Link>
         )}

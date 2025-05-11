@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Calendar from "./pages/Calendar";
@@ -23,7 +24,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Index />} />
           <Route path="/calendar" element={
             <DashboardLayout>
               <Calendar />
