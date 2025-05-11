@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,8 @@ import { File, Video, FileText, Plus, Search, Bookmark, Star, Paperclip, FileIma
 
 export default function Resources() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState<string | undefined>(undefined);
-  const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [favorites, setFavorites] = useState<string[]>([]);
   
   const [resources, setResources] = useState([
@@ -156,8 +157,8 @@ export default function Resources() {
       resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesSubject = !selectedSubject || resource.subject === selectedSubject;
-    const matchesType = !selectedType || resource.type === selectedType;
+    const matchesSubject = selectedSubject === "all" || resource.subject === selectedSubject;
+    const matchesType = selectedType === "all" || resource.type === selectedType;
     
     return matchesSearch && matchesSubject && matchesType;
   });
