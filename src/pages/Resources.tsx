@@ -261,7 +261,7 @@ export default function Resources() {
                 </Label>
                 <Select 
                   onValueChange={(value) => setNewResource({ ...newResource, subject: value })}
-                  value={newResource.subject}
+                  value={newResource.subject || ""}
                 >
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Selecione a matéria" />
@@ -356,7 +356,7 @@ export default function Resources() {
                     <SelectValue placeholder="Todas as matérias" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as matérias</SelectItem>
+                    <SelectItem value="all">Todas as matérias</SelectItem>
                     {subjects.map((subject) => (
                       <SelectItem key={subject} value={subject}>
                         {subject}
@@ -376,7 +376,7 @@ export default function Resources() {
                     <SelectValue placeholder="Todos os tipos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os tipos</SelectItem>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
                     <SelectItem value="document">Documentos</SelectItem>
                     <SelectItem value="video">Vídeos</SelectItem>
                     <SelectItem value="audio">Áudios</SelectItem>
@@ -406,8 +406,8 @@ export default function Resources() {
                 className="w-full"
                 onClick={() => {
                   setSearchQuery("");
-                  setSelectedSubject(undefined);
-                  setSelectedType(undefined);
+                  setSelectedSubject("all");
+                  setSelectedType("all");
                   setFavorites([]);
                 }}
               >
