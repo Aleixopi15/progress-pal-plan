@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
+import { Progress as ProgressBar } from "@/components/ui/progress"; // Renamed to ProgressBar
 import { BarChart, BarChart2, BookOpen, Calendar, Clock, Target } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart as RechartsBarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
@@ -37,7 +38,7 @@ export default function Progress() {
                   <span>Matemática</span>
                   <span>75%</span>
                 </div>
-                <Progress value={75} className="h-2" />
+                <ProgressBar value={75} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -45,7 +46,7 @@ export default function Progress() {
                   <span>Física</span>
                   <span>60%</span>
                 </div>
-                <Progress value={60} className="h-2" />
+                <ProgressBar value={60} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -53,7 +54,7 @@ export default function Progress() {
                   <span>Química</span>
                   <span>45%</span>
                 </div>
-                <Progress value={45} className="h-2" />
+                <ProgressBar value={45} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -61,7 +62,7 @@ export default function Progress() {
                   <span>Biologia</span>
                   <span>80%</span>
                 </div>
-                <Progress value={80} className="h-2" />
+                <ProgressBar value={80} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -69,7 +70,7 @@ export default function Progress() {
                   <span>História</span>
                   <span>65%</span>
                 </div>
-                <Progress value={65} className="h-2" />
+                <ProgressBar value={65} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -77,7 +78,7 @@ export default function Progress() {
                   <span>Geografia</span>
                   <span>50%</span>
                 </div>
-                <Progress value={50} className="h-2" />
+                <ProgressBar value={50} className="h-2" />
               </div>
               
               <div className="space-y-2">
@@ -85,7 +86,7 @@ export default function Progress() {
                   <span>Português</span>
                   <span>70%</span>
                 </div>
-                <Progress value={70} className="h-2" />
+                <ProgressBar value={70} className="h-2" />
               </div>
             </div>
           </CardContent>
@@ -99,13 +100,13 @@ export default function Progress() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weeklyData}>
+                <RechartsBarChart data={weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" />
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="hours" fill="hsl(var(--primary))" name="Horas" />
-                </BarChart>
+                </RechartsBarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -241,7 +242,7 @@ export default function Progress() {
                     <span>Meta de Estudo Semanal</span>
                     <span>24/30 horas</span>
                   </div>
-                  <Progress value={80} className="h-2" />
+                  <ProgressBar value={80} className="h-2" />
                 </div>
                 
                 <div className="space-y-2">
@@ -249,7 +250,7 @@ export default function Progress() {
                     <span>Conclusão do Material</span>
                     <span>65/100 %</span>
                   </div>
-                  <Progress value={65} className="h-2" />
+                  <ProgressBar value={65} className="h-2" />
                 </div>
                 
                 <div className="space-y-2">
@@ -257,7 +258,7 @@ export default function Progress() {
                     <span>Exercícios Resolvidos</span>
                     <span>120/200</span>
                   </div>
-                  <Progress value={60} className="h-2" />
+                  <ProgressBar value={60} className="h-2" />
                 </div>
                 
                 <div className="space-y-2">
@@ -265,7 +266,7 @@ export default function Progress() {
                     <span>Simulados Realizados</span>
                     <span>5/10</span>
                   </div>
-                  <Progress value={50} className="h-2" />
+                  <ProgressBar value={50} className="h-2" />
                 </div>
               </div>
             </CardContent>
