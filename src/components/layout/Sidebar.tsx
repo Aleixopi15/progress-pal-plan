@@ -11,7 +11,8 @@ import {
   User, 
   Settings, 
   Menu, 
-  X 
+  X,
+  Book 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -60,6 +61,7 @@ export function Sidebar({ className }: SidebarProps) {
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
+    { href: "/subjects", icon: Book, label: "Matérias" },
     { href: "/calendar", icon: Calendar, label: "Cronograma" },
     { href: "/progress", icon: BarChart2, label: "Progresso" },
     { href: "/goals", icon: Target, label: "Metas" },

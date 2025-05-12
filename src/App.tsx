@@ -16,6 +16,9 @@ import Resources from "./pages/Resources";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Auth from "./pages/Auth";
+import Subjects from "./pages/Subjects";
+import Topics from "./pages/Topics";
+import Notes from "./pages/Notes";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +77,21 @@ const App = () => (
                 <DashboardLayout>
                   <Settings />
                 </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/subjects" element={
+              <RequireAuth>
+                <Subjects />
+              </RequireAuth>
+            } />
+            <Route path="/topics/:subjectId" element={
+              <RequireAuth>
+                <Topics />
+              </RequireAuth>
+            } />
+            <Route path="/notes/:subjectId/:topicId" element={
+              <RequireAuth>
+                <Notes />
               </RequireAuth>
             } />
             <Route path="*" element={<NotFound />} />
