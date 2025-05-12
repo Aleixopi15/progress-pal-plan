@@ -1,7 +1,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-interface StudyChartProps {
+export interface StudyChartProps {
   data: {
     name: string;
     hours: number;

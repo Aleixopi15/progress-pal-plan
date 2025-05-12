@@ -1,60 +1,46 @@
 
-import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import { CalendarCheck } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface StudySession {
-  id: string;
-  title: string;
-  subject: string;
-  date: string;
-  time: string;
-  duration: string;
-}
-
-interface NextStudySessionsProps {
-  sessions: StudySession[];
+export interface NextStudySessionsProps {
+  sessions: {
+    id: string;
+    title: string;
+    subject: string;
+    date: string;
+    time: string;
+    duration: string;
+  }[];
 }
 
 export function NextStudySessions({ sessions }: NextStudySessionsProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Próximas Sessões</CardTitle>
-          <CardDescription>Sessões de estudo programadas</CardDescription>
-        </div>
-        <CalendarCheck className="text-muted-foreground" />
+      <CardHeader className="pb-3">
+        <CardTitle>Próximas sessões de estudo</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {sessions.map((session) => (
-          <div key={session.id} className="rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-            <div className="flex justify-between">
-              <h3 className="font-medium">{session.title}</h3>
-              <span className="text-sm text-muted-foreground">{session.date}</span>
-            </div>
-            <div className="mt-1 flex flex-col sm:flex-row sm:gap-2 text-sm text-muted-foreground">
-              <span>{session.subject}</span>
-              <span className="hidden sm:inline">•</span>
-              <span>{session.time}</span>
-              <span className="hidden sm:inline">•</span>
-              <span>{session.duration}</span>
-            </div>
-          </div>
-        ))}
+      <CardContent>
+        <div className="space-y-4">
+          {sessions.length === 0 ? (
+            <p className="text-center text-muted-foreground">
+              Nenhuma sessão agendada. Planeje seu próximo estudo!
+            </p>
+          ) : (
+            sessions.map((session) => (
+              <div
+                key={session.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
+                <div>
+                  <h3 className="font-medium">{session.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {session.subject} • {session.date} • {session.time} • {session.duration}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </CardContent>
-      <CardFooter>
-        <Button className="w-full" variant="outline">
-          Ver Todas as Sessões
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

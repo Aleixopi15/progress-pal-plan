@@ -1,13 +1,13 @@
 
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useEffect, useState } from "react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyStreak } from "@/components/dashboard/StudyStreak";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress"; 
 import { StudyTasks } from "@/components/dashboard/StudyTasks";
 import { NextStudySessions } from "@/components/dashboard/NextStudySessions";
 import { StudyChart } from "@/components/dashboard/StudyChart";
+import { QuestionsStats } from "@/components/dashboard/QuestionsStats";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardStats {
@@ -28,6 +28,84 @@ export default function Index() {
     correctQuestions: 0
   });
   const [loading, setLoading] = useState(true);
+
+  // Dados de exemplo para os gráficos e componentes
+  const chartData = [
+    { name: "Seg", hours: 3, goal: 4 },
+    { name: "Ter", hours: 5, goal: 4 },
+    { name: "Qua", hours: 2, goal: 4 },
+    { name: "Qui", hours: 4, goal: 4 },
+    { name: "Sex", hours: 6, goal: 4 },
+    { name: "Sáb", hours: 3, goal: 2 },
+    { name: "Dom", hours: 1, goal: 2 },
+  ];
+
+  const streakData = {
+    currentStreak: 5,
+    days: [
+      { date: "Seg", hasStudied: true },
+      { date: "Ter", hasStudied: true },
+      { date: "Qua", hasStudied: true },
+      { date: "Qui", hasStudied: true },
+      { date: "Sex", hasStudied: true },
+      { date: "Sáb", hasStudied: false },
+      { date: "Dom", hasStudied: false },
+    ],
+  };
+
+  const tasks = [
+    {
+      id: "1",
+      title: "Revisão de Matemática",
+      subject: "Matemática",
+      time: "09:00 - 10:30",
+      duration: "1h 30min",
+      status: "completed" as const,
+    },
+    {
+      id: "2",
+      title: "Exercícios de Física",
+      subject: "Física",
+      time: "11:00 - 12:30",
+      duration: "1h 30min",
+      status: "upcoming" as const,
+    },
+    {
+      id: "3",
+      title: "Leitura de História",
+      subject: "História",
+      time: "14:00 - 15:30",
+      duration: "1h 30min",
+      status: "upcoming" as const,
+    },
+  ];
+
+  const nextSessions = [
+    {
+      id: "1",
+      title: "Química Orgânica",
+      subject: "Química",
+      date: "Amanhã",
+      time: "09:00 - 10:30",
+      duration: "1h 30min",
+    },
+    {
+      id: "2",
+      title: "Geometria",
+      subject: "Matemática",
+      date: "Amanhã",
+      time: "11:00 - 12:30",
+      duration: "1h 30min",
+    },
+    {
+      id: "3",
+      title: "Literatura Brasileira",
+      subject: "Português",
+      date: "Depois de amanhã",
+      time: "09:00 - 10:30",
+      duration: "1h 30min",
+    },
+  ];
 
   useEffect(() => {
     if (user) {
@@ -81,7 +159,7 @@ export default function Index() {
   };
 
   return (
-    <DashboardLayout>
+    <div className="space-y-4">
       <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Matérias" 
@@ -107,21 +185,24 @@ export default function Index() {
 
       <div className="grid gap-4 p-4 md:grid-cols-2 lg:grid-cols-7">
         <div className="col-span-full lg:col-span-4">
-          <StudyChart />
+          <StudyChart data={chartData} />
         </div>
         <div className="col-span-full lg:col-span-3">
-          <StudyStreak />
+          <StudyStreak currentStreak={streakData.currentStreak} days={streakData.days} />
         </div>
         <div className="col-span-full lg:col-span-4">
           <SubjectProgress />
         </div>
         <div className="col-span-full lg:col-span-3">
-          <StudyTasks />
+          <QuestionsStats />
         </div>
-        <div className="col-span-full">
-          <NextStudySessions />
+        <div className="col-span-full lg:col-span-4">
+          <StudyTasks tasks={tasks} />
+        </div>
+        <div className="col-span-full lg:col-span-3">
+          <NextStudySessions sessions={nextSessions} />
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 }

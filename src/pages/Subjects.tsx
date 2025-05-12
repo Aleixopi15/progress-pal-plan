@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Edit, Trash, Book, Check, X } from "lucide-react";
+import { Plus, Edit, Trash, Book, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -18,6 +18,14 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { SubjectDialog } from "@/components/subjects/SubjectDialog";
 import { useAuth } from "@/lib/auth";
+import { SubjectQuestions } from "@/components/subjects/SubjectQuestions";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "@/components/ui/accordion";
 
 export interface Subject {
   id: string;
@@ -32,15 +40,12 @@ export default function Subjects() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSubject, setCurrentSubject] = useState<Subject | null>(null);
+  const [activeTab, setActiveTab] = useState("subjects");
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchSubjects();
-  }, [user]);
-
-  async function fetchSubjects() {
+  const fetchSubjects = useCallback(async () => {
     try {
       setIsLoading(true);
       if (!user) return;
@@ -64,7 +69,11 @@ export default function Subjects() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [user, toast]);
+
+  useEffect(() => {
+    fetchSubjects();
+  }, [fetchSubjects]);
 
   const handleAddSubject = () => {
     setCurrentSubject(null);
@@ -117,54 +126,96 @@ export default function Subjects() {
           </Button>
         </PageTitle>
 
-        <Card>
-          <CardContent className="pt-6">
-            {isLoading ? (
-              <div className="flex justify-center py-8">Carregando...</div>
-            ) : subjects.length === 0 ? (
-              <div className="text-center py-8">
-                <Book size={40} className="mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">Nenhuma matéria encontrada</h3>
-                <p className="text-muted-foreground mb-4">Comece adicionando sua primeira matéria de estudo.</p>
-                <Button onClick={handleAddSubject}>
-                  <Plus className="mr-1" size={18} />
-                  Nova Matéria
-                </Button>
-              </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="subjects">Matérias</TabsTrigger>
+            <TabsTrigger value="questions">Questões</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="subjects">
+            <Card>
+              <CardContent className="pt-6">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">Carregando...</div>
+                ) : subjects.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Book size={40} className="mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">Nenhuma matéria encontrada</h3>
+                    <p className="text-muted-foreground mb-4">Comece adicionando sua primeira matéria de estudo.</p>
+                    <Button onClick={handleAddSubject}>
+                      <Plus className="mr-1" size={18} />
+                      Nova Matéria
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead className="hidden md:table-cell">Descrição</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subjects.map((subject) => (
+                        <TableRow key={subject.id}>
+                          <TableCell className="font-medium">{subject.name}</TableCell>
+                          <TableCell className="hidden md:table-cell">{subject.description}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="outline" size="icon" onClick={() => handleOpenTopics(subject.id)}>
+                                <Book size={16} />
+                              </Button>
+                              <Button variant="outline" size="icon" onClick={() => handleEditSubject(subject)}>
+                                <Edit size={16} />
+                              </Button>
+                              <Button variant="outline" size="icon" onClick={() => handleDeleteSubject(subject.id)}>
+                                <Trash size={16} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="questions">
+            {subjects.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center py-8">
+                    <Book size={40} className="mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">Nenhuma matéria encontrada</h3>
+                    <p className="text-muted-foreground mb-4">Adicione matérias para gerenciar questões.</p>
+                    <Button onClick={handleAddSubject}>
+                      <Plus className="mr-1" size={18} />
+                      Nova Matéria
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead className="hidden md:table-cell">Descrição</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <div className="space-y-4">
+                <Accordion type="multiple" className="w-full">
                   {subjects.map((subject) => (
-                    <TableRow key={subject.id}>
-                      <TableCell className="font-medium">{subject.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">{subject.description}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline" size="icon" onClick={() => handleOpenTopics(subject.id)}>
-                            <Book size={16} />
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleEditSubject(subject)}>
-                            <Edit size={16} />
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => handleDeleteSubject(subject.id)}>
-                            <Trash size={16} />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                    <AccordionItem key={subject.id} value={subject.id}>
+                      <AccordionTrigger>
+                        <span className="text-left font-medium">{subject.name}</span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <SubjectQuestions subjectId={subject.id} />
+                      </AccordionContent>
+                    </AccordionItem>
                   ))}
-                </TableBody>
-              </Table>
+                </Accordion>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       <SubjectDialog 

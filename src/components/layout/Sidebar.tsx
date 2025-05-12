@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { 
@@ -12,7 +12,8 @@ import {
   Settings, 
   Menu, 
   X,
-  Book 
+  Book,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -42,6 +43,9 @@ const NavItem = ({ href, icon: Icon, label, isCollapsed, isActive }: NavItemProp
       >
         <Icon size={20} />
         {!isCollapsed && <span>{label}</span>}
+        {isActive && isCollapsed && (
+          <span className="absolute inset-y-0 left-0 w-1 bg-primary rounded-r-full" />
+        )}
       </Button>
     </Link>
   );
@@ -52,12 +56,12 @@ export function Sidebar({ className }: SidebarProps) {
   const location = useLocation();
   const isMobile = useIsMobile();
 
-  // For mobile we default to collapsed
-  useState(() => {
+  // Para mobile começamos com collapsed
+  useEffect(() => {
     if (isMobile) {
       setIsCollapsed(true);
     }
-  });
+  }, [isMobile]);
 
   const navItems = [
     { href: "/dashboard", icon: Home, label: "Dashboard" },
@@ -73,7 +77,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        "flex flex-col border-r bg-card transition-all",
+        "flex flex-col border-r bg-card transition-all duration-300",
         isCollapsed ? "w-[60px]" : "w-[230px]",
         className
       )}
@@ -87,10 +91,10 @@ export function Sidebar({ className }: SidebarProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="ml-auto"
+          className={cn("", isCollapsed ? "ml-auto" : "")}
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
-          {isCollapsed ? <Menu size={20} /> : <X size={20} />}
+          {isCollapsed ? <ChevronRight size={20} /> : <X size={20} />}
         </Button>
       </div>
 
@@ -103,7 +107,7 @@ export function Sidebar({ className }: SidebarProps) {
               icon={item.icon}
               label={item.label}
               isCollapsed={isCollapsed}
-              isActive={location.pathname === item.href}
+              isActive={location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)}
             />
           ))}
         </nav>

@@ -5,25 +5,34 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
-interface SubjectWithProgress {
-  id: string;
-  name: string;
-  totalTopics: number;
-  totalQuestions: number;
-  correctQuestions: number;
-  progress: number;
+export interface SubjectProgressProps {
+  subjects?: {
+    id: string;
+    name: string;
+    progress: number;
+    color?: string;
+    totalTopics?: number;
+    totalQuestions?: number;
+    correctQuestions?: number;
+  }[];
 }
 
-export function SubjectProgress() {
-  const [subjects, setSubjects] = useState<SubjectWithProgress[]>([]);
+export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps) {
+  const [subjects, setSubjects] = useState<SubjectProgressProps["subjects"]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
+    if (propSubjects) {
+      setSubjects(propSubjects);
+      setIsLoading(false);
+      return;
+    }
+
     if (user) {
       fetchSubjectsWithProgress();
     }
-  }, [user]);
+  }, [user, propSubjects]);
 
   async function fetchSubjectsWithProgress() {
     try {
@@ -111,13 +120,13 @@ export function SubjectProgress() {
         <CardDescription>Seu desempenho em cada matéria</CardDescription>
       </CardHeader>
       <CardContent>
-        {subjects.length === 0 ? (
+        {subjects && subjects.length === 0 ? (
           <div className="text-center py-4">
             <p>Você ainda não tem matérias cadastradas.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {subjects.map((subject) => (
+            {subjects && subjects.map((subject) => (
               <div key={subject.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
