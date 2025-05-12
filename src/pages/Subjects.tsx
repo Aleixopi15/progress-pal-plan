@@ -215,6 +215,7 @@ export default function Subjects() {
           </TabsContent>
         </Tabs>
       </div>
+    </div>
 
       <SubjectDialog 
         open={isDialogOpen}
