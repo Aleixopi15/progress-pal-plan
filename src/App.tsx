@@ -34,7 +34,9 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={
               <RequireAuth>
-                <Index />
+                <DashboardLayout>
+                  <Index />
+                </DashboardLayout>
               </RequireAuth>
             } />
             <Route path="/calendar" element={
@@ -81,17 +83,23 @@ const App = () => (
             } />
             <Route path="/subjects" element={
               <RequireAuth>
-                <Subjects />
+                <DashboardLayout>
+                  <Subjects />
+                </DashboardLayout>
               </RequireAuth>
             } />
             <Route path="/topics/:subjectId" element={
               <RequireAuth>
-                <Topics />
+                <DashboardLayout>
+                  <Topics />
+                </DashboardLayout>
               </RequireAuth>
             } />
             <Route path="/notes/:subjectId/:topicId" element={
               <RequireAuth>
-                <Notes />
+                <DashboardLayout>
+                  <Notes />
+                </DashboardLayout>
               </RequireAuth>
             } />
             <Route path="*" element={<NotFound />} />

@@ -27,7 +27,7 @@ export function SubjectDialog({ open, setOpen, subject, onSuccess }: SubjectDial
   useEffect(() => {
     if (subject) {
       setName(subject.name);
-      setDescription(subject.description);
+      setDescription(subject.description || "");
     } else {
       setName("");
       setDescription("");

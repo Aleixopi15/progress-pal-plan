@@ -28,7 +28,7 @@ export function TopicDialog({ open, setOpen, topic, subjectId, onSuccess }: Topi
   useEffect(() => {
     if (topic) {
       setName(topic.name);
-      setDescription(topic.description);
+      setDescription(topic.description || "");
     } else {
       setName("");
       setDescription("");
