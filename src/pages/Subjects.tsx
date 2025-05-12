@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash, Book, ChevronDown, ChevronUp } from "lucide-react";
@@ -114,7 +113,6 @@ export default function Subjects() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6 p-4">
         <PageTitle 
           title="Matérias" 
@@ -224,6 +222,5 @@ export default function Subjects() {
         subject={currentSubject}
         onSuccess={fetchSubjects}
       />
-    </DashboardLayout>
   );
 }
