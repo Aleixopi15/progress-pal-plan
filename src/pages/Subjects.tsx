@@ -113,7 +113,7 @@ export default function Subjects() {
   };
 
   return (
-      <div className="space-y-6 p-4">
+      <div className="animate-fade-in">
         <PageTitle 
           title="Matérias" 
           subtitle="Gerencie suas matérias de estudo"
