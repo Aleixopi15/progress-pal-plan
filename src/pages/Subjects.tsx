@@ -223,5 +223,6 @@ export default function Subjects() {
         subject={currentSubject}
         onSuccess={fetchSubjects}
       />
+    </DashboardLayout>
   );
 }
