@@ -113,7 +113,8 @@ export default function Subjects() {
   };
 
   return (
-      <div className="animate-fade-in">
+    <DashboardLayout>
+      <div className="space-y-6 p-4">
         <PageTitle 
           title="Matérias" 
           subtitle="Gerencie suas matérias de estudo"
@@ -215,7 +216,6 @@ export default function Subjects() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
 
       <SubjectDialog 
         open={isDialogOpen}
