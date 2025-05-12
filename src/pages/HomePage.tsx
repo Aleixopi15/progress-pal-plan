@@ -1,16 +1,28 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { 
   BookOpen, 
   BarChart2, 
   Calendar, 
   Target, 
-  CheckCircle 
+  CheckCircle,
+  LogIn
 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 const HomePage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // Redirecionar para o dashboard se o usuário já estiver logado
+  React.useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -18,9 +30,15 @@ const HomePage = () => {
         <div className="flex items-center">
           <span className="font-bold text-primary text-xl">StudyPlan</span>
         </div>
-        <div className="ml-auto">
-          <Link to="/dashboard">
-            <Button>Acessar Painel</Button>
+        <div className="ml-auto flex gap-4">
+          <Link to="/auth">
+            <Button variant="outline">
+              <LogIn className="mr-2 h-4 w-4" />
+              Entrar
+            </Button>
+          </Link>
+          <Link to="/auth?tab=register">
+            <Button>Começar agora</Button>
           </Link>
         </div>
       </header>
@@ -167,9 +185,9 @@ const HomePage = () => {
             Comece agora mesmo a organizar seu tempo de estudo e alcance 
             resultados extraordinários com o StudyPlan.
           </p>
-          <Link to="/dashboard">
+          <Link to="/auth">
             <Button size="lg" variant="secondary">
-              Acessar a plataforma
+              Criar uma conta gratuita
             </Button>
           </Link>
         </div>

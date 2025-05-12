@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Bell, Search } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Bell, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -12,24 +12,32 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth";
 
 export function Header() {
-  const [user] = useState({
-    name: "Usuário",
-    email: "usuario@example.com",
-    image: ""
-  });
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  // Obter iniciais do nome do usuário a partir dos metadados se disponíveis
+  const userMetadata = user?.user_metadata as { nome?: string; sobrenome?: string } | undefined;
+  const nome = userMetadata?.nome || 'Usuário';
+  const sobrenome = userMetadata?.sobrenome || '';
+  
+  const initials = nome && sobrenome
+    ? `${nome[0]}${sobrenome[0]}`.toUpperCase()
+    : nome
+      ? nome[0].toUpperCase()
+      : 'U';
 
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase();
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
       <div className="hidden lg:flex lg:items-center">
-        <Link to="/" className="flex items-center gap-2 font-semibold text-lg">
+        <Link to="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
           <span className="font-bold text-primary">StudyPlan</span>
         </Link>
       </div>
@@ -49,13 +57,16 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar>
-                <AvatarImage src={user.image} />
+                <AvatarImage src="" />
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
+            <DropdownMenuLabel className="font-normal text-sm text-muted-foreground">
+              {nome} {sobrenome}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/profile">Perfil</Link>
@@ -64,7 +75,10 @@ export function Header() {
               <Link to="/settings">Configurações</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Sair</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

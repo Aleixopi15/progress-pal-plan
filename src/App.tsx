@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { AuthProvider, RequireAuth } from "@/lib/auth";
 import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -14,51 +15,71 @@ import Goals from "./pages/Goals";
 import Resources from "./pages/Resources";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/dashboard" element={<Index />} />
-          <Route path="/calendar" element={
-            <DashboardLayout>
-              <Calendar />
-            </DashboardLayout>
-          } />
-          <Route path="/progress" element={
-            <DashboardLayout>
-              <Progress />
-            </DashboardLayout>
-          } />
-          <Route path="/goals" element={
-            <DashboardLayout>
-              <Goals />
-            </DashboardLayout>
-          } />
-          <Route path="/resources" element={
-            <DashboardLayout>
-              <Resources />
-            </DashboardLayout>
-          } />
-          <Route path="/profile" element={
-            <DashboardLayout>
-              <Profile />
-            </DashboardLayout>
-          } />
-          <Route path="/settings" element={
-            <DashboardLayout>
-              <Settings />
-            </DashboardLayout>
-          } />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/dashboard" element={
+              <RequireAuth>
+                <Index />
+              </RequireAuth>
+            } />
+            <Route path="/calendar" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Calendar />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/progress" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Progress />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/goals" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Goals />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/resources" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Resources />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/profile" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Profile />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/settings" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Settings />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
