@@ -7,11 +7,12 @@ export interface StudyChartProps {
     hours: number;
     goal: number;
   }[];
+  className?: string;
 }
 
-export function StudyChart({ data }: StudyChartProps) {
+export function StudyChart({ data, className }: StudyChartProps) {
   return (
-    <div className="h-[240px] w-full">
+    <div className={`h-[240px] w-full ${className || ''}`}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}

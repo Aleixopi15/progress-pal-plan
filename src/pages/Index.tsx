@@ -119,7 +119,7 @@ export default function Index() {
       
       // Resolve subject names
       if (upcomingSessions.length > 0) {
-        const subjectIds = upcomingSessions.map(s => s.subject_id).filter(Boolean);
+        const subjectIds = studySessions?.slice(0, 2).map(s => s.subject_id).filter(Boolean) || [];
         
         if (subjectIds.length > 0) {
           const { data: subjectsData } = await supabase
@@ -128,10 +128,13 @@ export default function Index() {
             .in("id", subjectIds);
             
           if (subjectsData) {
-            upcomingSessions.forEach(session => {
-              const matchingSubject = subjectsData.find(s => s.id === session.subject_id);
-              if (matchingSubject) {
-                session.subject = matchingSubject.name;
+            upcomingSessions.forEach((session, index) => {
+              if (index < studySessions?.length) {
+                const sessionSubjectId = studySessions[index].subject_id;
+                const matchingSubject = subjectsData.find(s => s.id === sessionSubjectId);
+                if (matchingSubject) {
+                  session.subject = matchingSubject.name;
+                }
               }
             });
           }
@@ -198,7 +201,7 @@ export default function Index() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StudyStreak {...studyData.streakData} />
-        <StudyChart className="lg:col-span-2" data={studyData.chartData} />
+        <StudyChart data={studyData.chartData} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

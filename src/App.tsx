@@ -20,6 +20,7 @@ import Subjects from "./pages/Subjects";
 import Topics from "./pages/Topics";
 import Notes from "./pages/Notes";
 import Activity from "./pages/Activity";
+import History from "./pages/History";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,13 @@ const App = () => (
               <RequireAuth>
                 <DashboardLayout>
                   <Activity />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/history" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <History />
                 </DashboardLayout>
               </RequireAuth>
             } />
