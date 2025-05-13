@@ -79,11 +79,11 @@ export default function Dashboard() {
   };
 
   const subjects = [
-    { name: "Matemática", progress: 65, color: "bg-primary" },
-    { name: "Física", progress: 40, color: "bg-secondary" },
-    { name: "Química", progress: 75, color: "bg-accent" },
-    { name: "Biologia", progress: 50, color: "bg-[#f59e0b]" },
-    { name: "História", progress: 90, color: "bg-[#10b981]" },
+    { id: "1", name: "Matemática", progress: 65, color: "bg-primary", totalTopics: 12, totalQuestions: 85, correctQuestions: 65 },
+    { id: "2", name: "Física", progress: 40, color: "bg-secondary", totalTopics: 8, totalQuestions: 62, correctQuestions: 25 },
+    { id: "3", name: "Química", progress: 75, color: "bg-accent", totalTopics: 10, totalQuestions: 95, correctQuestions: 71 },
+    { id: "4", name: "Biologia", progress: 50, color: "bg-[#f59e0b]", totalTopics: 15, totalQuestions: 120, correctQuestions: 60 },
+    { id: "5", name: "História", progress: 90, color: "bg-[#10b981]", totalTopics: 7, totalQuestions: 75, correctQuestions: 68 },
   ];
 
   const nextSessions = [
