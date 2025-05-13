@@ -19,6 +19,7 @@ import Auth from "./pages/Auth";
 import Subjects from "./pages/Subjects";
 import Topics from "./pages/Topics";
 import Notes from "./pages/Notes";
+import Activity from "./pages/Activity";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,13 @@ const App = () => (
               <RequireAuth>
                 <DashboardLayout>
                   <Notes />
+                </DashboardLayout>
+              </RequireAuth>
+            } />
+            <Route path="/activity" element={
+              <RequireAuth>
+                <DashboardLayout>
+                  <Activity />
                 </DashboardLayout>
               </RequireAuth>
             } />

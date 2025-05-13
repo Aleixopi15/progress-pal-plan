@@ -18,7 +18,8 @@ export function StudyTimeButton() {
         className="gap-2"
       >
         <Clock size={18} />
-        Registrar Tempo de Estudo
+        <span className="hidden sm:inline">Registrar Tempo</span>
+        <span className="sm:hidden">Registrar</span>
       </Button>
       
       <AddStudyTimeDialog 

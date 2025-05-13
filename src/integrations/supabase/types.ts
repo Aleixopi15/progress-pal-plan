@@ -112,6 +112,81 @@ export type Database = {
           },
         ]
       }
+      study_sessions: {
+        Row: {
+          comment: string | null
+          correct_exercises: number | null
+          created_at: string
+          date: string
+          end_page: number | null
+          id: string
+          incorrect_exercises: number | null
+          lesson: string | null
+          registration_time: string
+          start_page: number | null
+          study_time: number
+          subject_id: string
+          subtopic: string | null
+          topic_id: string | null
+          user_id: string
+          video_end_time: string | null
+          video_start_time: string | null
+        }
+        Insert: {
+          comment?: string | null
+          correct_exercises?: number | null
+          created_at?: string
+          date?: string
+          end_page?: number | null
+          id?: string
+          incorrect_exercises?: number | null
+          lesson?: string | null
+          registration_time?: string
+          start_page?: number | null
+          study_time: number
+          subject_id: string
+          subtopic?: string | null
+          topic_id?: string | null
+          user_id: string
+          video_end_time?: string | null
+          video_start_time?: string | null
+        }
+        Update: {
+          comment?: string | null
+          correct_exercises?: number | null
+          created_at?: string
+          date?: string
+          end_page?: number | null
+          id?: string
+          incorrect_exercises?: number | null
+          lesson?: string | null
+          registration_time?: string
+          start_page?: number | null
+          study_time?: number
+          subject_id?: string
+          subtopic?: string | null
+          topic_id?: string | null
+          user_id?: string
+          video_end_time?: string | null
+          video_start_time?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "study_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "study_sessions_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string

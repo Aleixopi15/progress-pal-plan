@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
@@ -172,11 +171,7 @@ export function AddStudyTimeDialog({
     try {
       setIsLoading(true);
       
-      // This is a placeholder for when the study_sessions table is created
-      // Instead of using this code, we'll mock a successful response
-      
-      /*
-      // Create the study time entry
+      // Insert data into the study_sessions table
       const { error } = await supabase
         .from('study_sessions')
         .insert({
@@ -186,7 +181,7 @@ export function AddStudyTimeDialog({
           date: date.toISOString().split('T')[0],
           registration_time: currentTime,
           subtopic: subtopic || null,
-          study_time: studyTime,
+          study_time: parseInt(studyTime),
           lesson: lesson || null,
           correct_exercises: correctExercises ? parseInt(correctExercises) : null,
           incorrect_exercises: incorrectExercises ? parseInt(incorrectExercises) : null,
@@ -198,10 +193,6 @@ export function AddStudyTimeDialog({
         });
       
       if (error) throw error;
-      */
-      
-      // Simulate a successful API call
-      await new Promise(resolve => setTimeout(resolve, 500));
       
       toast({
         title: "Tempo de estudo registrado",
@@ -251,12 +242,13 @@ export function AddStudyTimeDialog({
                     {date ? format(date, "dd/MM/yyyy") : <span>Selecione uma data</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
                     initialFocus
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>

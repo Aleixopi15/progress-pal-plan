@@ -86,7 +86,7 @@ export function StudyTimer() {
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1">
             <Timer className="h-4 w-4" />
-            <span>Cronômetro</span>
+            <span className="hidden sm:inline">Cronômetro</span>
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="sm:max-w-md">
