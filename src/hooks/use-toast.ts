@@ -1,9 +1,4 @@
-import * as React from "react"
-
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
+import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -25,7 +20,7 @@ const actionTypes = {
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  count = (count + 1) % Number.MAX_VALUE
   return count.toString()
 }
 
@@ -34,11 +29,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
+      toast: Omit<ToasterToast, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
+      toast: Partial<ToasterToast> & Pick<ToasterToast, "id">
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -76,7 +71,10 @@ export const reducer = (state: State, action: Action): State => {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: [
+          ...state.toasts,
+          { ...action.toast, id: genId() },
+        ].slice(0, TOAST_LIMIT),
       }
 
     case "UPDATE_TOAST":

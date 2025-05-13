@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash, Book, ChevronDown, ChevronUp } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 
 export interface Subject {
   id: string;
@@ -34,8 +36,21 @@ export interface Subject {
   created_at: string;
 }
 
+interface SubjectStats {
+  id: string;
+  name: string;
+  description: string;
+  user_id: string;
+  created_at: string;
+  totalTopics: number;
+  totalQuestions: number;
+  correctQuestions: number;
+  incorrectQuestions: number;
+  progress: number;
+}
+
 export default function Subjects() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjects, setSubjects] = useState<SubjectStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentSubject, setCurrentSubject] = useState<Subject | null>(null);
@@ -58,7 +73,47 @@ export default function Subjects() {
         throw error;
       }
 
-      setSubjects(data || []);
+      // Get statistics for each subject
+      const subjectsWithStats = await Promise.all((data || []).map(async (subject) => {
+        // Get topics for this subject
+        const { data: topicsData } = await supabase
+          .from('topics')
+          .select('id')
+          .eq('subject_id', subject.id);
+
+        const totalTopics = topicsData?.length || 0;
+        let totalQuestions = 0;
+        let correctQuestions = 0;
+
+        // If there are topics, get questions for each topic
+        if (totalTopics > 0) {
+          const topicIds = topicsData.map(topic => topic.id);
+          const { data: questionsData } = await supabase
+            .from('questions')
+            .select('*')
+            .in('topic_id', topicIds);
+
+          if (questionsData) {
+            totalQuestions = questionsData.length;
+            correctQuestions = questionsData.filter(q => q.is_correct).length;
+          }
+        }
+
+        const progress = totalQuestions > 0 
+          ? Math.round((correctQuestions / totalQuestions) * 100) 
+          : 0;
+
+        return {
+          ...subject,
+          totalTopics,
+          totalQuestions,
+          correctQuestions,
+          incorrectQuestions: totalQuestions - correctQuestions,
+          progress
+        };
+      }));
+
+      setSubjects(subjectsWithStats);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -79,8 +134,16 @@ export default function Subjects() {
     setIsDialogOpen(true);
   };
 
-  const handleEditSubject = (subject: Subject) => {
-    setCurrentSubject(subject);
+  const handleEditSubject = (subject: SubjectStats) => {
+    // Convert back to Subject type for the dialog
+    const basicSubject: Subject = {
+      id: subject.id,
+      name: subject.name,
+      description: subject.description,
+      user_id: subject.user_id,
+      created_at: subject.created_at,
+    };
+    setCurrentSubject(basicSubject);
     setIsDialogOpen(true);
   };
 
@@ -151,6 +214,7 @@ export default function Subjects() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
+                        <TableHead className="hidden sm:table-cell">Estatísticas</TableHead>
                         <TableHead className="hidden md:table-cell">Descrição</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -159,6 +223,25 @@ export default function Subjects() {
                       {subjects.map((subject) => (
                         <TableRow key={subject.id}>
                           <TableCell className="font-medium">{subject.name}</TableCell>
+                          <TableCell className="hidden sm:table-cell">
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-3 gap-2 text-xs">
+                                <div>
+                                  <span className="font-medium">{subject.totalTopics}</span> tópicos
+                                </div>
+                                <div>
+                                  <span className="text-green-600 font-medium">{subject.correctQuestions}</span> acertos
+                                </div>
+                                <div>
+                                  <span className="text-red-600 font-medium">{subject.incorrectQuestions}</span> erros
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Progress value={subject.progress} className="h-2 flex-1" />
+                                <span className="text-xs font-medium">{subject.progress}%</span>
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell className="hidden md:table-cell">{subject.description}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
@@ -203,7 +286,16 @@ export default function Subjects() {
                   {subjects.map((subject) => (
                     <AccordionItem key={subject.id} value={subject.id}>
                       <AccordionTrigger>
-                        <span className="text-left font-medium">{subject.name}</span>
+                        <div className="flex flex-1 items-center justify-between pr-4">
+                          <span className="text-left font-medium">{subject.name}</span>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="hidden sm:inline">
+                              <span className="text-green-600 font-medium">{subject.correctQuestions}</span> acertos,
+                              <span className="text-red-600 font-medium ml-1">{subject.incorrectQuestions}</span> erros
+                            </span>
+                            <span className="hidden sm:inline">{subject.progress}% concluído</span>
+                          </div>
+                        </div>
                       </AccordionTrigger>
                       <AccordionContent>
                         <SubjectQuestions subjectId={subject.id} />
