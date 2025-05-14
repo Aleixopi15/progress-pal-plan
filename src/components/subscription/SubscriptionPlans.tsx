@@ -5,24 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle } from "lucide-react";
 
-// Definição dos planos disponíveis - substitua com seus próprios planos e preços
+// Definição dos planos disponíveis com o price ID fornecido pelo usuário
 const plans = [
-  {
-    id: "basic",
-    name: "Básico",
-    priceId: "price_1OtwDgGZm0nDPQVgqTNS3Xsd", // Substitua pelo seu priceId do Stripe
-    price: "R$ 29,90",
-    period: "mês",
-    features: [
-      "Acesso a recursos básicos",
-      "Acesso limitado a conteúdos",
-      "Suporte por email"
-    ],
-  },
   {
     id: "premium",
     name: "Premium",
-    priceId: "price_1OtwDgGZm0nDPQVgUfeuWgG3", // Substitua pelo seu priceId do Stripe
+    priceId: "price_1ROMxSRfGn1czbQbvAzC4qYi", // Price ID fornecido pelo usuário
     price: "R$ 49,90",
     period: "mês",
     popular: true,
@@ -54,24 +42,24 @@ export function SubscriptionPlans() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h2 className="text-3xl font-bold">Planos de Assinatura</h2>
+        <h2 className="text-3xl font-bold">Plano de Assinatura</h2>
         <p className="text-muted-foreground mt-2">
-          Escolha o plano que melhor atende às suas necessidades
+          Assine o plano premium para ter acesso a todos os recursos
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="max-w-md mx-auto">
         {plans.map((plan) => {
-          const isCurrentPlan = subscriptionData.is_active && plan.id === "premium"; // Lógica simplificada - ajuste conforme necessário
+          const isCurrentPlan = subscriptionData.is_active; // Lógica simplificada para verificar se é o plano atual
           
           return (
             <Card 
               key={plan.id} 
               className={`relative ${plan.popular ? "border-primary" : ""}`}
             >
-              {plan.popular && (
+              {plan.popular && !isCurrentPlan && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-1 rounded-full">
-                  Mais Popular
+                  Recomendado
                 </span>
               )}
               

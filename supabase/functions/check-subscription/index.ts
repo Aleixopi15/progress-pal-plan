@@ -1,5 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -7,72 +8,142 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper para logging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Criar cliente Supabase para leitura de dados
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
+  // Usar service role key para atualizações no banco
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
 
-    // Verificar autenticação do usuário
+  try {
+    logStep("Função iniciada");
+
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY não configurada");
+    logStep("Chave Stripe verificada");
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Cabeçalho de autorização não fornecido");
+    logStep("Cabeçalho de autorização encontrado");
+
+    const token = authHeader.replace("Bearer ", "");
+    logStep("Autenticando usuário com token");
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Erro de autenticação: ${userError.message}`);
-    
     const user = userData.user;
-    if (!user?.id) throw new Error("Usuário não autenticado");
+    if (!user?.email) throw new Error("Usuário não autenticado ou email não disponível");
+    logStep("Usuário autenticado", { userId: user.id, email: user.email });
 
-    // Criar cliente admin para leitura segura bypassing RLS
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
+    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
-    // Buscar informações de assinatura
-    const { data: subscription, error: subError } = await supabaseAdmin
-      .from("user_subscriptions")
-      .select("subscription_status, stripe_customer_id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (subError && subError.code !== "PGRST116") {
-      throw new Error(`Erro ao buscar assinatura: ${subError.message}`);
+    if (customers.data.length === 0) {
+      logStep("Nenhum cliente encontrado, atualizando estado não assinado");
+      
+      // Atualizar ou criar registro na tabela user_subscriptions
+      await supabaseClient.from("user_subscriptions").upsert({
+        user_id: user.id,
+        subscription_status: "inactive",
+        is_active: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "user_id" });
+      
+      return new Response(JSON.stringify({ 
+        subscription_status: "inactive",
+        stripe_customer_id: null,
+        current_period_start: null,
+        current_period_end: null,
+        is_active: false
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
-    // Buscar informações do histórico de assinatura mais recente
-    const { data: history } = await supabaseAdmin
-      .from("subscription_history")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const customerId = customers.data[0].id;
+    logStep("Cliente Stripe encontrado", { customerId });
 
-    // Preparar resposta
-    const response = {
-      subscription_status: subscription?.subscription_status || "inactive",
-      stripe_customer_id: subscription?.stripe_customer_id || null,
-      current_period_start: history?.current_period_start || null,
-      current_period_end: history?.current_period_end || null,
-      is_active: subscription?.subscription_status === "active"
-    };
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "active",
+      limit: 1,
+    });
+    
+    // Verificar se há assinatura ativa
+    const hasActiveSub = subscriptions.data.length > 0;
+    let subscription = null;
+    let subscriptionStatus = "inactive";
+    let currentPeriodStart = null;
+    let currentPeriodEnd = null;
+    
+    if (hasActiveSub) {
+      subscription = subscriptions.data[0];
+      subscriptionStatus = "active";
+      currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
+      currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      
+      logStep("Assinatura ativa encontrada", { 
+        subscriptionId: subscription.id, 
+        endDate: currentPeriodEnd
+      });
+    } else {
+      // Verificar se existe uma assinatura cancelada
+      const canceledSubscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "canceled",
+        limit: 1,
+      });
+      
+      if (canceledSubscriptions.data.length > 0) {
+        subscriptionStatus = "canceled";
+        logStep("Assinatura cancelada encontrada");
+      }
+    }
+    
+    // Atualizar registro na tabela user_subscriptions
+    await supabaseClient.from("user_subscriptions").upsert({
+      user_id: user.id,
+      stripe_customer_id: customerId,
+      subscription_status: subscriptionStatus,
+      current_period_start: currentPeriodStart,
+      current_period_end: currentPeriodEnd,
+      is_active: hasActiveSub,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id" });
 
-    return new Response(JSON.stringify(response), {
+    logStep("Banco de dados atualizado com informações da assinatura", { 
+      subscribed: hasActiveSub, 
+      status: subscriptionStatus
+    });
+    
+    return new Response(JSON.stringify({
+      subscription_status: subscriptionStatus,
+      stripe_customer_id: customerId,
+      current_period_start: currentPeriodStart,
+      current_period_end: currentPeriodEnd,
+      is_active: hasActiveSub
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Erro ao verificar assinatura:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERRO em check-subscription", { message: errorMessage });
+    
     return new Response(JSON.stringify({ 
-      error: error.message,
+      error: errorMessage,
       subscription_status: "error",
       is_active: false 
     }), {
