@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AuthProvider, RequireAuth } from "@/lib/auth";
+import { SubscriptionProvider } from "@/lib/subscription";
 import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -28,99 +29,101 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Index />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/calendar" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Calendar />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/progress" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Progress />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/goals" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Goals />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/resources" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Resources />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/profile" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Profile />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/settings" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Settings />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/subjects" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Subjects />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/topics/:subjectId" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Topics />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/notes/:subjectId/:topicId" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Notes />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/activity" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <Activity />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="/history" element={
-              <RequireAuth>
-                <DashboardLayout>
-                  <History />
-                </DashboardLayout>
-              </RequireAuth>
-            } />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <SubscriptionProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Index />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/calendar" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Calendar />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/progress" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Progress />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/goals" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Goals />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/resources" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Resources />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/profile" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Profile />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/settings" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Settings />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/subjects" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Subjects />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/topics/:subjectId" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Topics />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/notes/:subjectId/:topicId" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Notes />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/activity" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <Activity />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="/history" element={
+                <RequireAuth>
+                  <DashboardLayout>
+                    <History />
+                  </DashboardLayout>
+                </RequireAuth>
+              } />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SubscriptionProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
