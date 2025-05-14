@@ -11,7 +11,7 @@ const plans = [
     id: "premium",
     name: "Premium",
     priceId: "price_1ROMxSRfGn1czbQbvAzC4qYi", // Price ID fornecido pelo usuário
-    price: "R$ 49,90",
+    price: "R$ 29,90",
     period: "mês",
     popular: true,
     features: [
