@@ -11,17 +11,19 @@ import {
   LogIn
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useSubscription } from "@/lib/subscription";
 
 const HomePage = () => {
   const { user } = useAuth();
+  const { subscriptionData } = useSubscription();
   const navigate = useNavigate();
   
-  // Redirecionar para o dashboard se o usuário já estiver logado
+  // Redirecionar para o dashboard se o usuário já estiver logado e tiver assinatura ativa
   React.useEffect(() => {
-    if (user) {
+    if (user && subscriptionData.is_active) {
       navigate("/dashboard");
     }
-  }, [user, navigate]);
+  }, [user, subscriptionData.is_active, navigate]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -56,7 +58,7 @@ const HomePage = () => {
                 seu tempo de estudo, alcançando melhores resultados.
               </p>
               <div className="flex gap-4">
-                <Link to="/dashboard">
+                <Link to="/auth?tab=register">
                   <Button size="lg">Começar agora</Button>
                 </Link>
                 <Button size="lg" variant="outline">
@@ -111,6 +113,55 @@ const HomePage = () => {
                 Visualize seu desempenho com gráficos e estatísticas detalhadas 
                 sobre seu tempo de estudo.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="py-16 px-4 md:px-6 bg-background">
+        <div className="container mx-auto max-w-6xl">
+          <h2 className="text-3xl font-bold text-center mb-4">
+            Plano de Assinatura
+          </h2>
+          <p className="text-center text-muted-foreground mb-12 max-w-xl mx-auto">
+            Escolha o plano que melhor se adapta às suas necessidades e comece a melhorar seus estudos hoje mesmo.
+          </p>
+          
+          <div className="max-w-md mx-auto bg-card border border-primary rounded-lg overflow-hidden shadow-lg">
+            <div className="bg-primary p-4">
+              <h3 className="text-xl font-bold text-primary-foreground text-center">Plano Premium</h3>
+            </div>
+            <div className="p-6">
+              <div className="flex justify-center items-baseline mb-4">
+                <span className="text-3xl font-bold">R$ 49,90</span>
+                <span className="text-muted-foreground ml-1">/mês</span>
+              </div>
+              
+              <ul className="space-y-3 mb-6">
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Acesso completo a recursos</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Acesso ilimitado a conteúdos</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Suporte prioritário</span>
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <span>Recursos exclusivos</span>
+                </li>
+              </ul>
+              
+              <Link to="/auth?tab=register">
+                <Button className="w-full" size="lg">
+                  Assinar Agora
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

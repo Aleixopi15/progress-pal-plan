@@ -10,6 +10,7 @@ import { QuestionsStats } from "@/components/dashboard/QuestionsStats";
 import { StudyStreak } from "@/components/dashboard/StudyStreak";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
+import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 
 export default function Index() {
   const { user } = useAuth();
@@ -192,6 +193,9 @@ export default function Index() {
         </div>
         <StudyTimeButton />
       </div>
+
+      {/* Adiciona o banner de assinatura quando necessário */}
+      <SubscriptionBanner />
 
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard title="Horas de Estudo" value={studyData.totalHours.toString()} description="Este mês" />

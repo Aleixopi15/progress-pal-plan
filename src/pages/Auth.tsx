@@ -1,277 +1,274 @@
 
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
+import React, { useEffect, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
+import { useSubscription } from "@/lib/subscription";
+import { toast } from "@/components/ui/use-toast";
 
 export default function Auth() {
+  // Formulário de login
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Formulário de registro
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
   const [nome, setNome] = useState("");
   const [sobrenome, setSobrenome] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { signIn, signUp, user } = useAuth();
+  
+  const location = useLocation();
   const navigate = useNavigate();
-
+  const { signIn, signUp, user } = useAuth();
+  const { subscriptionData, loading: subscriptionLoading } = useSubscription();
+  
+  // Determinar qual aba deve estar ativa com base na URL
+  const defaultTab = location.search.includes("tab=register") ? "register" : "login";
+  
+  // Redirecionar se usuário já estiver autenticado
   useEffect(() => {
-    if (user) {
+    if (user && !subscriptionLoading && subscriptionData.is_active) {
       navigate("/dashboard");
+    } else if (user && !subscriptionLoading && !subscriptionData.is_active) {
+      navigate("/settings"); // Redirecionar para a página de assinatura se não tiver assinatura ativa
     }
-  }, [user, navigate]);
-
-  async function handleSignIn(e: React.FormEvent) {
+  }, [user, navigate, subscriptionData, subscriptionLoading]);
+  
+  // Função de login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
+    if (!email || !password) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
+      setIsSubmitting(true);
       await signIn(email, password);
-      navigate("/dashboard");
-    } catch (error: any) {
-      setError(error.message);
+      // Navegação será feita pelo useEffect acima
+    } catch (error) {
+      // Erro é tratado dentro da função signIn
+      console.error("Erro ao fazer login:", error);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  }
-
-  async function handleSignUp(e: React.FormEvent) {
+  };
+  
+  // Função de registro
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      await signUp(email, password, nome, sobrenome);
-      // Não navegamos automaticamente após o registro para permitir que o usuário faça login
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+    
+    if (!registerEmail || !registerPassword || !nome || !sobrenome) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive"
+      });
+      return;
     }
-  }
-
-  return (
-    <div className="flex min-h-screen bg-background">
-      <div className="flex flex-col items-center justify-center flex-1 px-4 py-12">
-        <div className="flex items-center justify-center mb-8">
-          <BookOpen className="h-10 w-10 text-primary mr-2" />
-          <span className="font-bold text-3xl text-primary">StudyPlan</span>
-        </div>
-
-        <div className="w-full max-w-md">
-          <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Entrar</TabsTrigger>
-              <TabsTrigger value="register">Registrar</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="login">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Faça login na sua conta</CardTitle>
-                  <CardDescription>
-                    Digite seu email e senha para acessar sua conta
-                  </CardDescription>
-                </CardHeader>
-                <form onSubmit={handleSignIn}>
-                  <CardContent className="space-y-4">
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="password">Senha</Label>
-                        <a href="#" className="text-xs text-primary hover:underline">
-                          Esqueceu a senha?
-                        </a>
-                      </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" type="submit" disabled={isLoading}>
-                      {isLoading ? "Entrando..." : "Entrar"}
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="register">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Crie sua conta</CardTitle>
-                  <CardDescription>
-                    Preencha os campos abaixo para começar a usar o StudyPlan
-                  </CardDescription>
-                </CardHeader>
-                <form onSubmit={handleSignUp}>
-                  <CardContent className="space-y-4">
-                    {error && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{error}</AlertDescription>
-                      </Alert>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">Nome</Label>
-                        <Input
-                          id="firstName"
-                          placeholder="João"
-                          value={nome}
-                          onChange={(e) => setNome(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Sobrenome</Label>
-                        <Input
-                          id="lastName"
-                          placeholder="Silva"
-                          value={sobrenome}
-                          onChange={(e) => setSobrenome(e.target.value)}
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="seu@email.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Senha</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button className="w-full" type="submit" disabled={isLoading}>
-                      {isLoading ? "Registrando..." : "Registrar"}
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+    
+    try {
+      setIsSubmitting(true);
+      await signUp(registerEmail, registerPassword, nome, sobrenome);
+      toast({
+        title: "Registro realizado!",
+        description: "Faça login com suas credenciais.",
+      });
+      // Redirecionar para a aba de login
+      navigate("/auth");
+    } catch (error) {
+      // Erro é tratado dentro da função signUp
+      console.error("Erro ao fazer registro:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  if (user && subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-
-      <div className="hidden lg:block lg:w-1/2 bg-gradient-to-r from-primary to-primary-foreground">
-        <div className="flex flex-col justify-center h-full px-12 text-white">
-          <h1 className="text-5xl font-bold mb-6">Organize seus estudos com eficiência</h1>
-          <p className="text-xl mb-8">
-            Planeje seu tempo, acompanhe seu progresso e alcance seus objetivos de aprendizado com o StudyPlan.
+    );
+  }
+  
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-primary">StudyPlan</h1>
+          <p className="text-muted-foreground">
+            Organize seus estudos com eficiência
           </p>
-          <ul className="space-y-4">
-            <li className="flex items-center">
-              <svg
-                className="h-6 w-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-              Cronograma de estudos personalizado
-            </li>
-            <li className="flex items-center">
-              <svg
-                className="h-6 w-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-              Acompanhamento de progresso
-            </li>
-            <li className="flex items-center">
-              <svg
-                className="h-6 w-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-              Definição e acompanhamento de metas
-            </li>
-            <li className="flex items-center">
-              <svg
-                className="h-6 w-6 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                ></path>
-              </svg>
-              Análise de desempenho
-            </li>
-          </ul>
         </div>
+        
+        <Tabs defaultValue={defaultTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Cadastro</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Entrar</CardTitle>
+                <CardDescription>
+                  Faça login para acessar sua conta
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleLogin}>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label htmlFor="password">Senha</Label>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Entrando...
+                      </>
+                    ) : (
+                      "Entrar"
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="register">
+            <Card>
+              <CardHeader>
+                <CardTitle>Criar conta</CardTitle>
+                <CardDescription>
+                  Crie uma nova conta para começar
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={handleRegister}>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="nome">Nome</Label>
+                      <Input
+                        id="nome"
+                        type="text"
+                        placeholder="João"
+                        value={nome}
+                        onChange={(e) => setNome(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sobrenome">Sobrenome</Label>
+                      <Input
+                        id="sobrenome"
+                        type="text"
+                        placeholder="Silva"
+                        value={sobrenome}
+                        onChange={(e) => setSobrenome(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="registerEmail">Email</Label>
+                    <Input
+                      id="registerEmail"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={registerEmail}
+                      onChange={(e) => setRegisterEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="registerPassword">Senha</Label>
+                    <div className="relative">
+                      <Input
+                        id="registerPassword"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando conta...
+                      </>
+                    ) : (
+                      "Criar conta"
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

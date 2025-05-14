@@ -13,7 +13,7 @@ import { RequireSubscription } from "@/components/subscription/RequireSubscripti
 
 interface SubscriptionHistoryItem {
   id: string;
-  status: "active" | "past_due" | "canceled" | "inactive" | "error";
+  status: "active" | "past_due" | "canceled" | "inactive" | "error" | string; // Updated to accept string
   stripe_subscription_id: string;
   current_period_start: string | null;
   current_period_end: string | null;
