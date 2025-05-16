@@ -71,6 +71,10 @@ export function StudyTimer() {
     }
   };
   
+  // Calculate minutes for display
+  const displayMinutes = Math.floor(seconds / 60);
+  const displaySeconds = seconds % 60;
+  
   // Cleanup interval on component unmount
   useEffect(() => {
     return () => {
@@ -105,8 +109,11 @@ export function StudyTimer() {
             <CardContent>
               <div className="flex justify-center">
                 <div className="text-5xl font-bold tabular-nums">
-                  {formatDuration(seconds)}
+                  {displayMinutes.toString().padStart(2, '0')}:{displaySeconds.toString().padStart(2, '0')}
                 </div>
+              </div>
+              <div className="text-center mt-2 text-muted-foreground">
+                Total: {Math.ceil(seconds / 60)} minutos
               </div>
             </CardContent>
             <CardFooter className="flex justify-center gap-4">
