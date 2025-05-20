@@ -41,7 +41,7 @@ export function StudyTimer() {
     }
   };
   
-  // Reset the timer
+  // Reset the timer and open study dialog
   const resetTimer = () => {
     if (intervalRef.current) {
       window.clearInterval(intervalRef.current);

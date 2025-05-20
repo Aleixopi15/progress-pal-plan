@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, BookOpen } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -269,15 +269,15 @@ export default function History() {
       case "canceled":
         return "canceled";
       case "incomplete":
-        return "incomplete";
+        return "pending";
       case "incomplete_expired":
-        return "incomplete_expired";
+        return "expired";
       case "past_due":
         return "past_due";
       case "trialing":
-        return "trialing";
+        return "active"; // Map trialing to active
       case "unpaid":
-        return "unpaid";
+        return "past_due"; // Map unpaid to past_due
       default:
         return "inactive";
     }

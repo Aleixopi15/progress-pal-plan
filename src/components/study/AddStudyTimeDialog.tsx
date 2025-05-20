@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
@@ -172,7 +173,7 @@ export function AddStudyTimeDialog({
       setIsLoading(true);
       
       // Insert data into the study_sessions table
-      const { error } = await supabase
+      const { error: sessionError } = await supabase
         .from('study_sessions')
         .insert({
           user_id: user.id,
@@ -192,7 +193,44 @@ export function AddStudyTimeDialog({
           comment: comment || null
         });
       
-      if (error) throw error;
+      if (sessionError) throw sessionError;
+      
+      // If exercises were recorded and a topic was selected, create question entries
+      if (selectedTopic && (parseInt(correctExercises) > 0 || parseInt(incorrectExercises) > 0)) {
+        // Create correct questions
+        if (parseInt(correctExercises) > 0) {
+          const correctQuestions = Array(parseInt(correctExercises)).fill(null).map(() => ({
+            content: `Exercício da sessão de ${format(date, "dd/MM/yyyy")}`,
+            answer: "Resposta correta",
+            is_correct: true,
+            topic_id: selectedTopic,
+            user_id: user.id
+          }));
+          
+          const { error: correctError } = await supabase
+            .from('questions')
+            .insert(correctQuestions);
+            
+          if (correctError) throw correctError;
+        }
+        
+        // Create incorrect questions
+        if (parseInt(incorrectExercises) > 0) {
+          const incorrectQuestions = Array(parseInt(incorrectExercises)).fill(null).map(() => ({
+            content: `Exercício da sessão de ${format(date, "dd/MM/yyyy")}`,
+            answer: "Resposta incorreta",
+            is_correct: false,
+            topic_id: selectedTopic,
+            user_id: user.id
+          }));
+          
+          const { error: incorrectError } = await supabase
+            .from('questions')
+            .insert(incorrectQuestions);
+            
+          if (incorrectError) throw incorrectError;
+        }
+      }
       
       toast({
         title: "Tempo de estudo registrado",
@@ -225,7 +263,7 @@ export function AddStudyTimeDialog({
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Data */}
+            {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="date">Data <span className="text-red-500">*</span></Label>
               <Popover>
@@ -254,7 +292,7 @@ export function AddStudyTimeDialog({
               </Popover>
             </div>
             
-            {/* Horário do Registro */}
+            {/* Registration Time */}
             <div className="space-y-2">
               <Label>Horário do Registro</Label>
               <div className="flex items-center rounded-md border border-input bg-background px-3 h-10">
@@ -263,7 +301,7 @@ export function AddStudyTimeDialog({
               </div>
             </div>
             
-            {/* Disciplina */}
+            {/* Subject */}
             <div className="space-y-2">
               <Label htmlFor="subject">Disciplina <span className="text-red-500">*</span></Label>
               <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -280,7 +318,7 @@ export function AddStudyTimeDialog({
               </Select>
             </div>
             
-            {/* Tópico */}
+            {/* Topic */}
             <div className="space-y-2">
               <Label htmlFor="topic">Categoria</Label>
               <Select value={selectedTopic} onValueChange={setSelectedTopic} disabled={!selectedSubject || topics.length === 0}>
@@ -297,7 +335,7 @@ export function AddStudyTimeDialog({
               </Select>
             </div>
             
-            {/* Subtópico */}
+            {/* Subtopic */}
             <div className="space-y-2">
               <Label htmlFor="subtopic">Subtópico</Label>
               <Input
@@ -308,7 +346,7 @@ export function AddStudyTimeDialog({
               />
             </div>
             
-            {/* Tempo de Estudo */}
+            {/* Study Time */}
             <div className="space-y-2">
               <Label htmlFor="studyTime">Tempo de Estudo (min) <span className="text-red-500">*</span></Label>
               <Input
@@ -333,32 +371,49 @@ export function AddStudyTimeDialog({
               />
             </div>
             
-            {/* Exercícios */}
+            {/* Exercises - Now with clearer labels */}
             <div className="space-y-2">
-              <Label>Exercícios</Label>
+              <Label>Questões</Label>
               <div className="grid grid-cols-2 gap-2">
                 <div>
+                  <div className="flex items-center mb-1">
+                    <Check className="h-3.5 w-3.5 text-green-600 mr-1" />
+                    <span className="text-xs">Acertos</span>
+                  </div>
                   <Input
                     type="number"
                     min="0"
                     value={correctExercises}
                     onChange={(e) => setCorrectExercises(e.target.value)}
-                    placeholder="C (Certos)"
+                    placeholder="Quantidade"
                   />
                 </div>
                 <div>
+                  <div className="flex items-center mb-1">
+                    <X className="h-3.5 w-3.5 text-red-600 mr-1" />
+                    <span className="text-xs">Erros</span>
+                  </div>
                   <Input
                     type="number"
                     min="0"
                     value={incorrectExercises}
                     onChange={(e) => setIncorrectExercises(e.target.value)}
-                    placeholder="E (Errados)"
+                    placeholder="Quantidade"
                   />
                 </div>
               </div>
+              {selectedTopic ? (
+                <div className="text-xs text-muted-foreground">
+                  As questões serão salvas automaticamente associadas ao tópico selecionado.
+                </div>
+              ) : (
+                <div className="text-xs text-amber-600">
+                  Selecione um tópico para salvar as questões automaticamente.
+                </div>
+              )}
             </div>
             
-            {/* Páginas */}
+            {/* Pages */}
             <div className="space-y-2">
               <Label>Páginas</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -383,7 +438,7 @@ export function AddStudyTimeDialog({
               </div>
             </div>
             
-            {/* Videoaulas */}
+            {/* Video lessons */}
             <div className="space-y-2">
               <Label>Videoaulas</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -407,7 +462,7 @@ export function AddStudyTimeDialog({
             </div>
           </div>
 
-          {/* Comentário */}
+          {/* Comment */}
           <div className="space-y-2">
             <Label htmlFor="comment">Comentário</Label>
             <Textarea

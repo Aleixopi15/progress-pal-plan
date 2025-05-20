@@ -64,7 +64,7 @@ export function QuestionDialog({ open, setOpen, question, topicId, onSuccess }: 
       setIsSubmitting(true);
       
       if (question) {
-        // Atualizar questão existente
+        // Update existing question
         const { error } = await supabase
           .from("questions")
           .update({
@@ -82,7 +82,7 @@ export function QuestionDialog({ open, setOpen, question, topicId, onSuccess }: 
           description: "Sua questão foi atualizada com sucesso!"
         });
       } else {
-        // Criar nova questão
+        // Create new question
         const { error } = await supabase
           .from("questions")
           .insert({
