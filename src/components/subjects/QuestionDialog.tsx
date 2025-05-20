@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Question } from "@/pages/Notes";
 import { Check, X } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface QuestionDialogProps {
   open: boolean;
@@ -148,27 +149,27 @@ export function QuestionDialog({ open, setOpen, question, topicId, onSuccess }: 
           </div>
           
           <div className="space-y-2">
-            <Label>Status da Questão</Label>
-            <div className="flex gap-4 mt-2">
-              <Button
-                type="button"
-                variant={isCorrect ? "default" : "outline"}
-                className={isCorrect ? "bg-green-600 hover:bg-green-700" : ""}
-                onClick={() => setIsCorrect(true)}
-              >
-                <Check className="mr-2" size={18} />
-                Acertei
-              </Button>
-              <Button
-                type="button"
-                variant={!isCorrect ? "default" : "outline"}
-                className={!isCorrect ? "bg-red-600 hover:bg-red-700" : ""}
-                onClick={() => setIsCorrect(false)}
-              >
-                <X className="mr-2" size={18} />
-                Errei
-              </Button>
-            </div>
+            <Label>Resultado</Label>
+            <RadioGroup 
+              value={isCorrect ? "correct" : "incorrect"} 
+              onValueChange={(value) => setIsCorrect(value === "correct")}
+              className="flex flex-col space-y-2 sm:flex-row sm:space-x-4 sm:space-y-0"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="correct" id="correct" />
+                <Label htmlFor="correct" className="flex items-center">
+                  <Check className="mr-1 h-4 w-4 text-green-600" />
+                  Acertei a questão
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="incorrect" id="incorrect" />
+                <Label htmlFor="incorrect" className="flex items-center">
+                  <X className="mr-1 h-4 w-4 text-red-600" />
+                  Errei a questão
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
           
           <div className="flex gap-3 justify-end">
