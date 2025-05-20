@@ -11,12 +11,13 @@ import { StudyStreak } from "@/components/dashboard/StudyStreak";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
+import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 
 export default function Index() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [studyData, setStudyData] = useState({
-    totalHours: 0,
+    totalMinutes: 0,
     totalQuestions: 0,
     correctPercentage: 0,
     chartData: [],
@@ -49,9 +50,8 @@ export default function Index() {
         
       if (sessionsError) throw sessionsError;
 
-      // Calculate total study hours
+      // Calculate total study minutes
       const totalMinutes = studySessions?.reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
-      const totalHours = Math.round(totalMinutes / 60);
       
       // Fetch questions data
       const { data: questions, error: questionsError } = await supabase
@@ -66,35 +66,50 @@ export default function Index() {
       const correctQuestions = questions?.filter(q => q.is_correct)?.length || 0;
       const correctPercentage = totalQuestions > 0 ? Math.round((correctQuestions / totalQuestions) * 100) : 0;
       
-      // Generate chart data (in a real implementation you'd aggregate this from actual data)
-      // For now we'll use placeholder data with some randomness
+      // Generate chart data from actual study sessions
       const getDayInitials = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
       const today = new Date();
-      const chartData = Array(7).fill(0).map((_, i) => {
-        const dayIndex = (today.getDay() - 6 + i + 7) % 7;
-        const hasStudied = studySessions?.some(session => {
-          const sessionDate = new Date(session.date);
-          return sessionDate.getDay() === dayIndex;
-        });
+      const last7Days = Array(7).fill(0).map((_, i) => {
+        const date = new Date();
+        date.setDate(today.getDate() - (6 - i));
+        return date;
+      });
+      
+      const chartData = last7Days.map((date) => {
+        const dayIndex = date.getDay();
+        const dayFormatted = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        
+        // Filter sessions for this day
+        const dayStudySessions = studySessions?.filter(session => 
+          session.date === dayFormatted
+        ) || [];
+        
+        // Calculate hours studied on this day
+        const minutesStudied = dayStudySessions.reduce((sum, session) => 
+          sum + (session.study_time || 0), 0);
+        const hoursStudied = minutesStudied / 60;
         
         return {
           name: getDayInitials[dayIndex],
-          hours: hasStudied ? Math.max(1, Math.floor(Math.random() * 5)) : 0,
+          hours: Number(hoursStudied.toFixed(1)),
           goal: dayIndex === 0 || dayIndex === 6 ? 2 : 4 // Weekend vs weekday goals
         };
       });
       
-      // Generate streak data
+      // Generate streak data based on actual study sessions
       const streakDays = getDayInitials.map((day, i) => {
         const dayIndex = (today.getDay() - 6 + i + 7) % 7;
-        const hasStudied = studySessions?.some(session => {
-          const sessionDate = new Date(session.date);
-          return sessionDate.getDay() === dayIndex;
-        });
+        const date = new Date();
+        date.setDate(today.getDate() - (today.getDay() - dayIndex + 7) % 7);
+        const dateFormatted = date.toISOString().split('T')[0];
+        
+        const hasStudied = studySessions?.some(session => 
+          session.date === dateFormatted
+        ) || false;
         
         return {
           date: day,
-          hasStudied: hasStudied
+          hasStudied
         };
       });
       
@@ -108,19 +123,19 @@ export default function Index() {
         }
       }
       
-      // Format upcoming study sessions
-      const upcomingSessions = studySessions?.slice(0, 2).map(session => ({
+      // Format upcoming study sessions from recent records
+      const upcomingSessions = studySessions?.slice(0, 3).map(session => ({
         id: session.id,
         title: session.lesson || session.subtopic || "Sessão de estudo",
-        subject: "Carregando...", // Will be replaced with subject name
-        date: "Hoje",
+        subject: "Carregando...",
+        date: "Próxima sessão",
         time: session.registration_time,
         duration: `${session.study_time} min`
       })) || [];
       
       // Resolve subject names
       if (upcomingSessions.length > 0) {
-        const subjectIds = studySessions?.slice(0, 2).map(s => s.subject_id).filter(Boolean) || [];
+        const subjectIds = studySessions?.slice(0, 3).map(s => s.subject_id).filter(Boolean) || [];
         
         if (subjectIds.length > 0) {
           const { data: subjectsData } = await supabase
@@ -144,7 +159,7 @@ export default function Index() {
       
       // Set all data
       setStudyData({
-        totalHours,
+        totalMinutes,
         totalQuestions,
         correctPercentage,
         chartData,
@@ -156,7 +171,7 @@ export default function Index() {
       
       // Use the most recent study sessions as tasks
       setTasks(
-        studySessions?.slice(0, 2).map(session => ({
+        studySessions?.slice(0, 3).map(session => ({
           id: session.id,
           title: session.lesson || session.subtopic || "Sessão de estudo",
           subject: "Matéria",
@@ -198,9 +213,21 @@ export default function Index() {
       <SubscriptionBanner />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard title="Horas de Estudo" value={studyData.totalHours.toString()} description="Este mês" />
-        <StatCard title="Questões" value={studyData.totalQuestions.toString()} description="Resolvidas" />
-        <StatCard title="Aproveitamento" value={`${studyData.correctPercentage}%`} description="de acertos" />
+        <StatCard 
+          title="Horas de Estudo" 
+          value={formatMinutesToHoursAndMinutes(studyData.totalMinutes)} 
+          description="Total acumulado" 
+        />
+        <StatCard 
+          title="Questões" 
+          value={studyData.totalQuestions.toString()} 
+          description="Resolvidas" 
+        />
+        <StatCard 
+          title="Aproveitamento" 
+          value={`${studyData.correctPercentage}%`} 
+          description="de acertos" 
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

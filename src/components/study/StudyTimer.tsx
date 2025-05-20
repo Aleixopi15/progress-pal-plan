@@ -75,6 +75,9 @@ export function StudyTimer() {
   const displayMinutes = Math.floor(seconds / 60);
   const displaySeconds = seconds % 60;
   
+  // Calculate total minutes for study tracking
+  const totalMinutes = Math.ceil(seconds / 60);
+  
   // Cleanup interval on component unmount
   useEffect(() => {
     return () => {
@@ -113,7 +116,7 @@ export function StudyTimer() {
                 </div>
               </div>
               <div className="text-center mt-2 text-muted-foreground">
-                Total: {Math.ceil(seconds / 60)} minutos
+                Total: {totalMinutes} minutos
               </div>
             </CardContent>
             <CardFooter className="flex justify-center gap-4">
@@ -172,7 +175,7 @@ export function StudyTimer() {
         onOpenChange={(open) => {
           if (!open) handleDialogClose(false);
         }}
-        initialStudyTime={Math.ceil(seconds / 60).toString()}
+        initialStudyTime={totalMinutes.toString()}
         onSave={() => handleDialogClose(true)}
       />
     </>

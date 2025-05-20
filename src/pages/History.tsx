@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageTitle } from "@/components/layout/PageTitle";
@@ -17,7 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
-import { Check, X, Clock, BookOpen } from "lucide-react";
+import { BookOpen, Check, Clock, X } from "lucide-react";
 import { 
   Select, 
   SelectContent, 
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SubscriptionStatus } from "@/lib/subscription";
+import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 
 // Interfaces
 interface StudySession {
@@ -251,16 +251,6 @@ export default function History() {
     ? questions.filter(question => question.subject_id === selectedSubjectId)
     : questions;
 
-  const formatMinutes = (minutes: number) => {
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    
-    if (hrs > 0) {
-      return `${hrs}h ${mins}min`;
-    }
-    return `${mins} min`;
-  };
-
   const formatSubscriptionStatus = (status: string): SubscriptionStatus => {
     // Map the string status to the SubscriptionStatus enum
     switch(status) {
@@ -269,9 +259,9 @@ export default function History() {
       case "canceled":
         return "canceled";
       case "incomplete":
-        return "pending";
+        return "inactive"; // Fixed: Changed from "pending" to "inactive"
       case "incomplete_expired":
-        return "expired";
+        return "inactive"; // Fixed: Changed from "expired" to "inactive"
       case "past_due":
         return "past_due";
       case "trialing":
@@ -356,7 +346,7 @@ export default function History() {
                               {format(new Date(session.date), "dd/MM/yyyy")}
                             </TableCell>
                             <TableCell>{session.subject_name}</TableCell>
-                            <TableCell>{formatMinutes(session.study_time)}</TableCell>
+                            <TableCell>{formatMinutesToHoursAndMinutes(session.study_time)}</TableCell>
                             <TableCell className="max-w-xs truncate">
                               {session.comment || "-"}
                             </TableCell>
@@ -381,7 +371,7 @@ export default function History() {
                   <div className="flex justify-center py-8">Carregando...</div>
                 ) : filteredQuestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <Book className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                    <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium">
                       {selectedSubjectId ? "Nenhuma questão para esta matéria" : "Nenhuma questão encontrada"}
                     </h3>
