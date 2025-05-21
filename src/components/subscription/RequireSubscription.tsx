@@ -3,6 +3,7 @@ import { ReactNode, useEffect } from "react";
 import { useSubscription } from "@/lib/subscription";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 
 interface RequireSubscriptionProps {
   children: ReactNode;
@@ -18,6 +19,11 @@ export function RequireSubscription({
 
   useEffect(() => {
     if (!loading && !subscriptionData.is_active) {
+      toast({
+        title: "Assinatura requerida",
+        description: "Você precisa ter uma assinatura ativa para acessar esta área",
+        variant: "destructive"
+      });
       navigate(redirectTo);
     }
   }, [subscriptionData.is_active, loading, navigate, redirectTo]);

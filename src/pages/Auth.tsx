@@ -34,10 +34,12 @@ export default function Auth() {
   
   // Redirecionar se usuário já estiver autenticado
   useEffect(() => {
-    if (user && !subscriptionLoading && subscriptionData.is_active) {
-      navigate("/dashboard");
-    } else if (user && !subscriptionLoading && !subscriptionData.is_active) {
-      navigate("/settings"); // Redirecionar para a página de assinatura se não tiver assinatura ativa
+    if (user && !subscriptionLoading) {
+      if (subscriptionData.is_active) {
+        navigate("/dashboard");
+      } else {
+        navigate("/settings"); // Redirecionar para a página de assinatura se não tiver assinatura ativa
+      }
     }
   }, [user, navigate, subscriptionData, subscriptionLoading]);
   
