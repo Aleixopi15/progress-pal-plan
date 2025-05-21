@@ -10,7 +10,7 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <RequireSubscription>
+    <RequireSubscription redirectTo="/settings">
       <div className="flex min-h-screen">
         <Sidebar className="hidden md:flex" />
         <div className="flex flex-1 flex-col">

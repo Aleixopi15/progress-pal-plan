@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AuthProvider, RequireAuth } from "@/lib/auth";
 import { SubscriptionProvider } from "@/lib/subscription";
+import { RequireSubscription } from "@/components/subscription/RequireSubscription";
 import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -38,9 +39,11 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/settings" element={
                 <RequireAuth>
-                  <DashboardLayout>
-                    <Settings />
-                  </DashboardLayout>
+                  <div className="flex min-h-screen">
+                    <div className="flex flex-1 flex-col">
+                      <main className="flex-1 px-4 py-6 md:px-6"><Settings /></main>
+                    </div>
+                  </div>
                 </RequireAuth>
               } />
               <Route path="/dashboard" element={
