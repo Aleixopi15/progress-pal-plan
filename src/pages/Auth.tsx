@@ -35,6 +35,7 @@ export default function Auth() {
   // Redirecionar se usuário já estiver autenticado
   useEffect(() => {
     if (user && !subscriptionLoading) {
+      // Se o usuário tem uma assinatura ativa, redirecionar para o dashboard
       if (subscriptionData.is_active) {
         navigate("/dashboard");
       } else {

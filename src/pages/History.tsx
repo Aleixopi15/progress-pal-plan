@@ -1,53 +1,30 @@
 
 import React, { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { StatusBadge } from "@/components/subscription/StatusBadge";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
-import { format } from "date-fns";
-import { BookOpen, Check, Clock, X } from "lucide-react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { SubscriptionStatus } from "@/lib/subscription";
-import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Loader2, BookOpen, Calendar, Clock } from "lucide-react";
 
-// Define interfaces for our data types
-interface StudySession {
+interface Session {
   id: string;
   date: string;
-  study_time: number;
+  registration_time: string;
   subject_id: string;
-  subject_name?: string;
   topic_id: string | null;
-  topic_name?: string;
-  comment: string | null;
-}
-
-interface Question {
-  id: string;
-  content: string;
-  is_correct: boolean;
-  topic_id: string;
-  topic_name?: string;
-  created_at: string;
-  subject_id?: string;
-  subject_name?: string;
+  subtopic: string | null;
+  study_time: number;
+  lesson: string | null;
+  start_page: number | null;
+  end_page: number | null;
+  correct_exercises: number | null;
+  incorrect_exercises: number | null;
+  subject_name: string;
+  topic_name: string | null;
 }
 
 interface Subject {
@@ -55,315 +32,211 @@ interface Subject {
   name: string;
 }
 
-interface SubscriptionHistoryItem {
-  id: string;
-  stripe_subscription_id: string;
-  status: string;
-  current_period_start: string;
-  current_period_end: string;
-  price_id: string | null;
-  created_at: string;
-}
-
 export default function History() {
-  const [activeTab, setActiveTab] = useState("study");
-  const [studySessions, setStudySessions] = useState<StudySession[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-  const [loadingStudy, setLoadingStudy] = useState(true);
-  const [loadingQuestions, setLoadingQuestions] = useState(true);
-  const [loadingSubscription, setLoadingSubscription] = useState(true);
-  
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const [currentTab, setCurrentTab] = useState<string>("all");
 
+  // Buscar sessões de estudo e matérias
   useEffect(() => {
-    if (user) {
-      console.log("Fetching data for user:", user.id);
-      fetchSubjects();
+    if (!user) return;
+    
+    async function fetchData() {
+      try {
+        setLoading(true);
+        
+        // Buscar matérias
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from("subjects")
+          .select("id, name")
+          .eq("user_id", user.id);
+        
+        if (subjectsError) throw subjectsError;
+        
+        // Buscar sessões de estudo
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from("study_sessions")
+          .select(`
+            id, date, registration_time, subject_id, topic_id, 
+            subtopic, study_time, lesson, start_page, end_page,
+            correct_exercises, incorrect_exercises
+          `)
+          .eq("user_id", user.id)
+          .order("date", { ascending: false });
+        
+        if (sessionsError) throw sessionsError;
+        
+        // Criar um mapa de matérias para facilitar busca
+        const subjectMap = subjectsData.reduce((map, subject) => {
+          map[subject.id] = subject.name;
+          return map;
+        }, {} as Record<string, string>);
+        
+        // Buscar nomes de tópicos para os IDs encontrados
+        const topicIds = sessionsData
+          .filter(session => session.topic_id)
+          .map(session => session.topic_id);
+          
+        let topicMap: Record<string, string> = {};
+        
+        if (topicIds.length > 0) {
+          const { data: topicsData, error: topicsError } = await supabase
+            .from("topics")
+            .select("id, name")
+            .in("id", topicIds);
+            
+          if (!topicsError && topicsData) {
+            topicMap = topicsData.reduce((map, topic) => {
+              map[topic.id] = topic.name;
+              return map;
+            }, {} as Record<string, string>);
+          }
+        }
+        
+        // Enriquecer os dados das sessões com nomes de matérias e tópicos
+        const enrichedSessions = sessionsData.map(session => ({
+          ...session,
+          subject_name: subjectMap[session.subject_id] || "Matéria não encontrada",
+          topic_name: session.topic_id ? (topicMap[session.topic_id] || "Tópico não encontrado") : null
+        }));
+        
+        setSessions(enrichedSessions);
+        setSubjects(subjectsData);
+      } catch (error) {
+        console.error("Erro ao buscar histórico:", error);
+      } finally {
+        setLoading(false);
+      }
     }
+    
+    fetchData();
   }, [user]);
 
-  // When user or activeTab changes, fetch the appropriate data
-  useEffect(() => {
-    if (user) {
-      switch(activeTab) {
-        case "study":
-          fetchStudySessions();
-          break;
-        case "questions":
-          fetchQuestions();
-          break;
-        case "subscription":
-          fetchSubscriptionHistory();
-          break;
-      }
+  // Filtrar sessões com base na aba e matéria selecionada
+  const getFilteredSessions = () => {
+    let filtered = [...sessions];
+    
+    // Filtrar por matéria
+    if (selectedSubject !== "all") {
+      filtered = filtered.filter(session => session.subject_id === selectedSubject);
     }
-  }, [user, activeTab]);
-
-  // Effect to refetch data when subject filter changes
-  useEffect(() => {
-    if (user && selectedSubjectId !== undefined) {
-      if (activeTab === "study") {
-        fetchStudySessions();
-      } else if (activeTab === "questions") {
-        fetchQuestions();
-      }
+    
+    // Filtrar por período
+    const now = new Date();
+    if (currentTab === "today") {
+      const today = new Date().toISOString().split("T")[0];
+      filtered = filtered.filter(session => session.date === today);
+    } else if (currentTab === "week") {
+      const oneWeekAgo = new Date(now);
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      filtered = filtered.filter(session => new Date(session.date) >= oneWeekAgo);
+    } else if (currentTab === "month") {
+      const oneMonthAgo = new Date(now);
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      filtered = filtered.filter(session => new Date(session.date) >= oneMonthAgo);
     }
-  }, [selectedSubjectId, activeTab]);
-
-  const fetchSubjects = async () => {
-    try {
-      console.log("Fetching subjects...");
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("id, name")
-        .eq("user_id", user?.id)
-        .order("name");
-
-      if (error) throw error;
-      console.log("Subjects fetched:", data);
-      setSubjects(data || []);
-    } catch (error: any) {
-      console.error("Error fetching subjects:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar matérias",
-        description: error.message
-      });
-    }
+    
+    return filtered;
   };
-
-  const fetchStudySessions = async () => {
-    try {
-      setLoadingStudy(true);
-      console.log("Fetching study sessions...");
-      
-      let query = supabase
-        .from("study_sessions")
-        .select(`
-          *,
-          subjects:subject_id (name)
-        `)
-        .eq("user_id", user?.id)
-        .order("date", { ascending: false });
-      
-      // Apply subject filter if selected
-      if (selectedSubjectId) {
-        console.log("Filtering by subject:", selectedSubjectId);
-        query = query.eq("subject_id", selectedSubjectId);
-      }
-
-      const { data: sessionsData, error: sessionsError } = await query;
-      
-      if (sessionsError) throw sessionsError;
-
-      console.log("Study sessions fetched:", sessionsData);
-
-      // Transform data to include subject name
-      const formattedSessions = sessionsData.map(session => ({
-        ...session,
-        subject_name: session.subjects?.name
-      }));
-
-      setStudySessions(formattedSessions);
-    } catch (error: any) {
-      console.error("Error fetching study sessions:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar sessões de estudo",
-        description: error.message
-      });
-    } finally {
-      setLoadingStudy(false);
-    }
+  
+  const filteredSessions = getFilteredSessions();
+  
+  // Calcular estatísticas
+  const totalMinutes = filteredSessions.reduce((sum, session) => sum + (session.study_time || 0), 0);
+  const totalSessions = filteredSessions.length;
+  const avgMinutesPerSession = totalSessions > 0 ? Math.round(totalMinutes / totalSessions) : 0;
+  
+  // Formatar minutos para horas e minutos
+  const formatMinutes = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}min` : `${mins}min`;
   };
-
-  const fetchQuestions = async () => {
-    try {
-      setLoadingQuestions(true);
-      console.log("Fetching questions...");
-      
-      // First get all questions
-      let query = supabase
-        .from("questions")
-        .select(`
-          id, 
-          content, 
-          is_correct,
-          topic_id, 
-          created_at
-        `)
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-      
-      // Apply subject filter if selected and we have topics data
-      if (selectedSubjectId) {
-        console.log("Filtering questions by subject:", selectedSubjectId);
-        // We need to get topic IDs for the selected subject first
-        const { data: topicsData } = await supabase
-          .from("topics")
-          .select("id")
-          .eq("subject_id", selectedSubjectId);
-        
-        if (topicsData && topicsData.length > 0) {
-          const topicIds = topicsData.map(t => t.id);
-          console.log("Filtering by topics:", topicIds);
-          query = query.in("topic_id", topicIds);
-        } else {
-          // If no topics found for this subject, return empty result
-          console.log("No topics found for subject, returning empty result");
-          setQuestions([]);
-          setLoadingQuestions(false);
-          return;
-        }
-      }
-
-      const { data: questionsData, error: questionsError } = await query;
-      
-      if (questionsError) throw questionsError;
-      console.log("Questions fetched:", questionsData);
-
-      if (!questionsData || questionsData.length === 0) {
-        setQuestions([]);
-        setLoadingQuestions(false);
-        return;
-      }
-
-      // Get all topics involved
-      const topicIds = [...new Set(questionsData.map(q => q.topic_id))];
-      console.log("Getting topic details for topics:", topicIds);
-      
-      const { data: topicsData, error: topicsError } = await supabase
-        .from("topics")
-        .select(`
-          id,
-          name,
-          subject_id
-        `)
-        .in("id", topicIds);
-
-      if (topicsError) throw topicsError;
-      console.log("Topics fetched:", topicsData);
-
-      // Get all subjects involved
-      const subjectIds = [...new Set(topicsData.map(t => t.subject_id))];
-      console.log("Getting subject details for subjects:", subjectIds);
-      
-      const { data: subjectsData, error: subjectsError } = await supabase
-        .from("subjects")
-        .select(`
-          id,
-          name
-        `)
-        .in("id", subjectIds);
-
-      if (subjectsError) throw subjectsError;
-      console.log("Subjects fetched for questions:", subjectsData);
-
-      // Map topic names and subject info to questions
-      const enrichedQuestions = questionsData.map(question => {
-        const topic = topicsData.find(t => t.id === question.topic_id);
-        const subject = topic ? subjectsData.find(s => s.id === topic.subject_id) : null;
-        
-        return {
-          ...question,
-          topic_name: topic?.name || "Desconhecido",
-          subject_id: subject?.id || undefined,
-          subject_name: subject?.name || "Desconhecido"
-        };
-      });
-
-      console.log("Enriched questions:", enrichedQuestions);
-      setQuestions(enrichedQuestions);
-    } catch (error: any) {
-      console.error("Error fetching questions:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar questões",
-        description: error.message
-      });
-    } finally {
-      setLoadingQuestions(false);
-    }
-  };
-
-  const fetchSubscriptionHistory = async () => {
-    try {
-      setLoadingSubscription(true);
-      console.log("Fetching subscription history...");
-      
-      const { data, error } = await supabase
-        .from("subscription_history")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      console.log("Subscription history fetched:", data);
-      
-      setSubscriptionHistory(data || []);
-    } catch (error: any) {
-      console.error("Error fetching subscription history:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar histórico de assinatura",
-        description: error.message
-      });
-    } finally {
-      setLoadingSubscription(false);
-    }
-  };
-
-  const formatSubscriptionStatus = (status: string): SubscriptionStatus => {
-    switch(status) {
-      case "active":
-        return "active";
-      case "canceled":
-        return "canceled";
-      case "incomplete":
-      case "incomplete_expired":
-        return "inactive";
-      case "past_due":
-        return "past_due";
-      case "trialing":
-        return "active";
-      case "unpaid":
-        return "past_due";
-      default:
-        return "inactive";
-    }
-  };
-
+  
   const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd/MM/yyyy");
-    } catch (error) {
-      console.error("Invalid date format:", dateString, error);
-      return dateString;
-    }
+    const date = new Date(dateString);
+    return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 p-4 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <PageTitle 
-        title="Histórico" 
-        subtitle="Acompanhe seu progresso ao longo do tempo"
+        title="Histórico de Estudos" 
+        subtitle="Veja todo o seu histórico de sessões de estudo"
       />
-
-      <div className="flex justify-end">
-        <div className="w-full max-w-xs">
-          <Select 
-            value={selectedSubjectId || ""} 
-            onValueChange={(value) => setSelectedSubjectId(value || null)}
-          >
+      
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tempo Total de Estudo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+              <div className="text-2xl font-bold">{formatMinutes(totalMinutes)}</div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Sessões de Estudo
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+              <div className="text-2xl font-bold">{totalSessions}</div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Média por Sessão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+              <div className="text-2xl font-bold">{formatMinutes(avgMinutesPerSession)}</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full sm:w-auto">
+          <TabsList>
+            <TabsTrigger value="all">Todos</TabsTrigger>
+            <TabsTrigger value="today">Hoje</TabsTrigger>
+            <TabsTrigger value="week">Última semana</TabsTrigger>
+            <TabsTrigger value="month">Último mês</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <div className="w-full sm:w-64">
+          <Select value={selectedSubject} onValueChange={setSelectedSubject}>
             <SelectTrigger>
               <SelectValue placeholder="Filtrar por matéria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as matérias</SelectItem>
+              <SelectItem value="all">Todas as matérias</SelectItem>
               {subjects.map((subject) => (
                 <SelectItem key={subject.id} value={subject.id}>
                   {subject.name}
@@ -373,182 +246,67 @@ export default function History() {
           </Select>
         </div>
       </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="study">Sessões de Estudo</TabsTrigger>
-          <TabsTrigger value="questions">Questões</TabsTrigger>
-          <TabsTrigger value="subscription">Assinatura</TabsTrigger>
-        </TabsList>
-        
-        {/* Sessões de Estudo */}
-        <TabsContent value="study">
-          <Card>
-            <CardHeader>
-              <CardTitle>Sessões de Estudo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingStudy ? (
-                <div className="flex justify-center py-8">Carregando...</div>
-              ) : studySessions.length === 0 ? (
-                <div className="text-center py-8">
-                  <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">
-                    {selectedSubjectId ? "Nenhuma sessão para esta matéria" : "Nenhuma sessão de estudo encontrada"}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Registre seu tempo de estudo para começar a acompanhar seu progresso"}
-                  </p>
+      
+      {filteredSessions.length > 0 ? (
+        <div className="space-y-4">
+          {filteredSessions.map((session) => (
+            <Card key={session.id} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="grid gap-2 md:grid-cols-3">
+                  <div>
+                    <h3 className="font-medium">{session.lesson || session.subtopic || "Sessão de estudo"}</h3>
+                    <div className="flex items-center mt-1 text-sm text-muted-foreground">
+                      <BookOpen className="mr-1 h-3 w-3" />
+                      <span>{session.subject_name}</span>
+                      {session.topic_name && (
+                        <>
+                          <span className="mx-1">•</span>
+                          <span>{session.topic_name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 items-center">
+                    <div className="flex items-center text-sm">
+                      <Clock className="mr-1 h-3 w-3 text-muted-foreground" />
+                      <span>{formatMinutes(session.study_time || 0)}</span>
+                    </div>
+                    
+                    {(session.correct_exercises || session.incorrect_exercises) && (
+                      <div className="text-sm">
+                        <span className="text-green-600">{session.correct_exercises || 0} acertos</span>
+                        <span className="mx-1">•</span>
+                        <span className="text-red-600">{session.incorrect_exercises || 0} erros</span>
+                      </div>
+                    )}
+                    
+                    {(session.start_page || session.end_page) && (
+                      <div className="text-sm text-muted-foreground">
+                        Páginas: {session.start_page || 0} - {session.end_page || 0}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="text-right text-sm text-muted-foreground">
+                    {formatDate(session.date)}
+                  </div>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Matéria</TableHead>
-                        <TableHead>Tempo</TableHead>
-                        <TableHead>Detalhes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {studySessions.map((session) => (
-                        <TableRow key={session.id}>
-                          <TableCell>
-                            {formatDate(session.date)}
-                          </TableCell>
-                          <TableCell>{session.subject_name || "—"}</TableCell>
-                          <TableCell>{formatMinutesToHoursAndMinutes(session.study_time)}</TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {session.comment || "-"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Questões */}
-        <TabsContent value="questions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Questões</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingQuestions ? (
-                <div className="flex justify-center py-8">Carregando...</div>
-              ) : questions.length === 0 ? (
-                <div className="text-center py-8">
-                  <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium">
-                    {selectedSubjectId ? "Nenhuma questão para esta matéria" : "Nenhuma questão encontrada"}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Adicione questões em seus tópicos para começar a acompanhar seu progresso"}
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Matéria</TableHead>
-                        <TableHead>Tópico</TableHead>
-                        <TableHead>Resultado</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {questions.map((question) => (
-                        <TableRow key={question.id}>
-                          <TableCell>
-                            {formatDate(question.created_at)}
-                          </TableCell>
-                          <TableCell>{question.subject_name}</TableCell>
-                          <TableCell>{question.topic_name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              {question.is_correct ? (
-                                <Check className="h-5 w-5 text-green-600 mr-1" />
-                              ) : (
-                                <X className="h-5 w-5 text-red-600 mr-1" />
-                              )}
-                              {question.is_correct ? "Acerto" : "Erro"}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        {/* Assinatura */}
-        <TabsContent value="subscription">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Assinatura</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingSubscription ? (
-                <div className="flex justify-center py-8">Carregando...</div>
-              ) : subscriptionHistory.length === 0 ? (
-                <div className="text-center py-8">
-                  <h3 className="text-lg font-medium">Nenhum histórico de assinatura</h3>
-                  <p className="text-muted-foreground">
-                    Seu histórico de assinatura aparecerá aqui
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Período</TableHead>
-                        <TableHead>ID da Assinatura</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {subscriptionHistory.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            {formatDate(item.created_at)}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={formatSubscriptionStatus(item.status)} />
-                          </TableCell>
-                          <TableCell>
-                            {item.current_period_start && item.current_period_end ? (
-                              <>
-                                {formatDate(item.current_period_start)} {" - "}
-                                {formatDate(item.current_period_end)}
-                              </>
-                            ) : (
-                              "-"
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {item.stripe_subscription_id}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Calendar className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+          <h3 className="text-xl font-medium">Nenhuma sessão de estudo</h3>
+          <p className="text-muted-foreground mt-1">
+            {currentTab === "all" && selectedSubject === "all" 
+              ? "Nenhuma sessão de estudo foi registrada. Comece a estudar para ver seu histórico aqui."
+              : "Nenhuma sessão de estudo foi encontrada para os filtros selecionados."}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
