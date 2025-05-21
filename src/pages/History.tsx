@@ -81,15 +81,42 @@ export default function History() {
 
   useEffect(() => {
     if (user) {
+      console.log("Fetching data for user:", user.id);
       fetchSubjects();
-      fetchStudySessions();
-      fetchQuestions();
-      fetchSubscriptionHistory();
     }
   }, [user]);
 
+  // When user or activeTab changes, fetch the appropriate data
+  useEffect(() => {
+    if (user) {
+      switch(activeTab) {
+        case "study":
+          fetchStudySessions();
+          break;
+        case "questions":
+          fetchQuestions();
+          break;
+        case "subscription":
+          fetchSubscriptionHistory();
+          break;
+      }
+    }
+  }, [user, activeTab]);
+
+  // Effect to refetch data when subject filter changes
+  useEffect(() => {
+    if (user && selectedSubjectId !== undefined) {
+      if (activeTab === "study") {
+        fetchStudySessions();
+      } else if (activeTab === "questions") {
+        fetchQuestions();
+      }
+    }
+  }, [selectedSubjectId, activeTab]);
+
   const fetchSubjects = async () => {
     try {
+      console.log("Fetching subjects...");
       const { data, error } = await supabase
         .from("subjects")
         .select("id, name")
@@ -97,8 +124,10 @@ export default function History() {
         .order("name");
 
       if (error) throw error;
+      console.log("Subjects fetched:", data);
       setSubjects(data || []);
     } catch (error: any) {
+      console.error("Error fetching subjects:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar matérias",
@@ -110,6 +139,7 @@ export default function History() {
   const fetchStudySessions = async () => {
     try {
       setLoadingStudy(true);
+      console.log("Fetching study sessions...");
       
       let query = supabase
         .from("study_sessions")
@@ -122,12 +152,15 @@ export default function History() {
       
       // Apply subject filter if selected
       if (selectedSubjectId) {
+        console.log("Filtering by subject:", selectedSubjectId);
         query = query.eq("subject_id", selectedSubjectId);
       }
 
       const { data: sessionsData, error: sessionsError } = await query;
       
       if (sessionsError) throw sessionsError;
+
+      console.log("Study sessions fetched:", sessionsData);
 
       // Transform data to include subject name
       const formattedSessions = sessionsData.map(session => ({
@@ -137,6 +170,7 @@ export default function History() {
 
       setStudySessions(formattedSessions);
     } catch (error: any) {
+      console.error("Error fetching study sessions:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar sessões de estudo",
@@ -150,6 +184,7 @@ export default function History() {
   const fetchQuestions = async () => {
     try {
       setLoadingQuestions(true);
+      console.log("Fetching questions...");
       
       // First get all questions
       let query = supabase
@@ -166,6 +201,7 @@ export default function History() {
       
       // Apply subject filter if selected and we have topics data
       if (selectedSubjectId) {
+        console.log("Filtering questions by subject:", selectedSubjectId);
         // We need to get topic IDs for the selected subject first
         const { data: topicsData } = await supabase
           .from("topics")
@@ -174,9 +210,11 @@ export default function History() {
         
         if (topicsData && topicsData.length > 0) {
           const topicIds = topicsData.map(t => t.id);
+          console.log("Filtering by topics:", topicIds);
           query = query.in("topic_id", topicIds);
         } else {
           // If no topics found for this subject, return empty result
+          console.log("No topics found for subject, returning empty result");
           setQuestions([]);
           setLoadingQuestions(false);
           return;
@@ -186,6 +224,7 @@ export default function History() {
       const { data: questionsData, error: questionsError } = await query;
       
       if (questionsError) throw questionsError;
+      console.log("Questions fetched:", questionsData);
 
       if (!questionsData || questionsData.length === 0) {
         setQuestions([]);
@@ -195,6 +234,7 @@ export default function History() {
 
       // Get all topics involved
       const topicIds = [...new Set(questionsData.map(q => q.topic_id))];
+      console.log("Getting topic details for topics:", topicIds);
       
       const { data: topicsData, error: topicsError } = await supabase
         .from("topics")
@@ -206,9 +246,11 @@ export default function History() {
         .in("id", topicIds);
 
       if (topicsError) throw topicsError;
+      console.log("Topics fetched:", topicsData);
 
       // Get all subjects involved
       const subjectIds = [...new Set(topicsData.map(t => t.subject_id))];
+      console.log("Getting subject details for subjects:", subjectIds);
       
       const { data: subjectsData, error: subjectsError } = await supabase
         .from("subjects")
@@ -219,6 +261,7 @@ export default function History() {
         .in("id", subjectIds);
 
       if (subjectsError) throw subjectsError;
+      console.log("Subjects fetched for questions:", subjectsData);
 
       // Map topic names and subject info to questions
       const enrichedQuestions = questionsData.map(question => {
@@ -233,8 +276,10 @@ export default function History() {
         };
       });
 
+      console.log("Enriched questions:", enrichedQuestions);
       setQuestions(enrichedQuestions);
     } catch (error: any) {
+      console.error("Error fetching questions:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar questões",
@@ -248,6 +293,7 @@ export default function History() {
   const fetchSubscriptionHistory = async () => {
     try {
       setLoadingSubscription(true);
+      console.log("Fetching subscription history...");
       
       const { data, error } = await supabase
         .from("subscription_history")
@@ -256,9 +302,11 @@ export default function History() {
         .order("created_at", { ascending: false });
       
       if (error) throw error;
+      console.log("Subscription history fetched:", data);
       
       setSubscriptionHistory(data || []);
     } catch (error: any) {
+      console.error("Error fetching subscription history:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar histórico de assinatura",
@@ -268,17 +316,6 @@ export default function History() {
       setLoadingSubscription(false);
     }
   };
-
-  // Effect to refetch data when subject filter changes
-  useEffect(() => {
-    if (user) {
-      if (activeTab === "study") {
-        fetchStudySessions();
-      } else if (activeTab === "questions") {
-        fetchQuestions();
-      }
-    }
-  }, [selectedSubjectId, activeTab]);
 
   const formatSubscriptionStatus = (status: string): SubscriptionStatus => {
     switch(status) {
@@ -297,6 +334,15 @@ export default function History() {
         return "past_due";
       default:
         return "inactive";
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "dd/MM/yyyy");
+    } catch (error) {
+      console.error("Invalid date format:", dateString, error);
+      return dateString;
     }
   };
 
@@ -369,7 +415,7 @@ export default function History() {
                       {studySessions.map((session) => (
                         <TableRow key={session.id}>
                           <TableCell>
-                            {format(new Date(session.date), "dd/MM/yyyy")}
+                            {formatDate(session.date)}
                           </TableCell>
                           <TableCell>{session.subject_name || "—"}</TableCell>
                           <TableCell>{formatMinutesToHoursAndMinutes(session.study_time)}</TableCell>
@@ -420,7 +466,7 @@ export default function History() {
                       {questions.map((question) => (
                         <TableRow key={question.id}>
                           <TableCell>
-                            {format(new Date(question.created_at), "dd/MM/yyyy")}
+                            {formatDate(question.created_at)}
                           </TableCell>
                           <TableCell>{question.subject_name}</TableCell>
                           <TableCell>{question.topic_name}</TableCell>
@@ -475,7 +521,7 @@ export default function History() {
                       {subscriptionHistory.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>
-                            {format(new Date(item.created_at), "dd/MM/yyyy")}
+                            {formatDate(item.created_at)}
                           </TableCell>
                           <TableCell>
                             <StatusBadge status={formatSubscriptionStatus(item.status)} />
@@ -483,8 +529,8 @@ export default function History() {
                           <TableCell>
                             {item.current_period_start && item.current_period_end ? (
                               <>
-                                {format(new Date(item.current_period_start), "dd/MM/yy")} {" - "}
-                                {format(new Date(item.current_period_end), "dd/MM/yy")}
+                                {formatDate(item.current_period_start)} {" - "}
+                                {formatDate(item.current_period_end)}
                               </>
                             ) : (
                               "-"
