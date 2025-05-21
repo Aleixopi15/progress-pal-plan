@@ -23,6 +23,11 @@ export default function Dashboard() {
   const [totalStudyMinutes, setTotalStudyMinutes] = useState(0);
   const [dailyTarget, setDailyTarget] = useState(360); // 6 hours in minutes
   const [tasksData, setTasksData] = useState([]);
+  const [chartData, setChartData] = useState([]);
+  const [streakData, setStreakData] = useState({
+    currentStreak: 0,
+    days: []
+  });
   
   useEffect(() => {
     if (user) {
@@ -38,14 +43,77 @@ export default function Dashboard() {
       // Fetch all study sessions to calculate total time
       const { data: studySessions, error: studyError } = await supabase
         .from('study_sessions')
-        .select('study_time')
-        .eq('user_id', user?.id);
+        .select('study_time, date')
+        .eq('user_id', user?.id)
+        .order('date', { ascending: false });
       
       if (studyError) throw studyError;
       
       // Calculate total minutes studied
       const totalMinutes = studySessions?.reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
       setTotalStudyMinutes(totalMinutes);
+      
+      // Generate chart data from actual study sessions
+      const last7Days = [];
+      const today = new Date();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(today.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        
+        last7Days.push({
+          date: dateStr,
+          name: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()],
+          dayOfWeek: date.getDay(),
+          hours: 0,
+          goal: date.getDay() === 0 || date.getDay() === 6 ? 2 : 4 // Weekend: 2h, Weekday: 4h
+        });
+      }
+      
+      // Calculate hours studied for each day
+      if (studySessions) {
+        studySessions.forEach(session => {
+          const day = last7Days.find(d => d.date === session.date);
+          if (day) {
+            // Convert minutes to hours with one decimal place
+            day.hours += parseFloat((session.study_time / 60).toFixed(1));
+          }
+        });
+      }
+      
+      // Format chart data
+      const formattedChartData = last7Days.map(day => ({
+        name: day.name,
+        hours: parseFloat(day.hours.toFixed(1)), // Ensure hours is a number with one decimal
+        goal: day.goal
+      }));
+      
+      setChartData(formattedChartData);
+      
+      // Calculate streak data based on actual study sessions
+      const streakDays = last7Days.map(day => {
+        const hasStudied = studySessions?.some(session => session.date === day.date) || false;
+        return {
+          date: day.name,
+          hasStudied
+        };
+      });
+      
+      // Calculate current streak
+      let currentStreak = 0;
+      for (let i = streakDays.length - 1; i >= 0; i--) {
+        if (streakDays[i].hasStudied) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+      
+      setStreakData({
+        currentStreak,
+        days: streakDays
+      });
       
       // Fetch recent tasks
       const { data: recentSessions, error: tasksError } = await supabase
@@ -98,38 +166,6 @@ export default function Dashboard() {
       )
     );
   };
-
-  // Weekly chart data
-  const chartData = [
-    { name: "Seg", hours: 3, goal: 4 },
-    { name: "Ter", hours: 5, goal: 4 },
-    { name: "Qua", hours: 2, goal: 4 },
-    { name: "Qui", hours: 4, goal: 4 },
-    { name: "Sex", hours: 6, goal: 4 },
-    { name: "Sáb", hours: 3, goal: 2 },
-    { name: "Dom", hours: 1, goal: 2 },
-  ];
-
-  const streakData = {
-    currentStreak: 5,
-    days: [
-      { date: "Seg", hasStudied: true },
-      { date: "Ter", hasStudied: true },
-      { date: "Qua", hasStudied: true },
-      { date: "Qui", hasStudied: true },
-      { date: "Sex", hasStudied: true },
-      { date: "Sáb", hasStudied: false },
-      { date: "Dom", hasStudied: false },
-    ],
-  };
-
-  const subjects = [
-    { id: "1", name: "Matemática", progress: 65, color: "bg-primary", totalTopics: 12, totalQuestions: 85, correctQuestions: 65 },
-    { id: "2", name: "Física", progress: 40, color: "bg-secondary", totalTopics: 8, totalQuestions: 62, correctQuestions: 25 },
-    { id: "3", name: "Química", progress: 75, color: "bg-accent", totalTopics: 10, totalQuestions: 95, correctQuestions: 71 },
-    { id: "4", name: "Biologia", progress: 50, color: "bg-[#f59e0b]", totalTopics: 15, totalQuestions: 120, correctQuestions: 60 },
-    { id: "5", name: "História", progress: 90, color: "bg-[#10b981]", totalTopics: 7, totalQuestions: 75, correctQuestions: 68 },
-  ];
 
   const nextSessions = [
     {
@@ -188,7 +224,7 @@ export default function Dashboard() {
         />
         <StatCard
           title="Streak Atual"
-          value="5 dias"
+          value={`${streakData.currentStreak} dias`}
           icon={<Award className="h-5 w-5" />}
           description="Melhor: 14 dias"
         />
@@ -200,7 +236,7 @@ export default function Dashboard() {
             <CardTitle>Horas de Estudo na Semana</CardTitle>
           </CardHeader>
           <CardContent>
-            <StudyChart data={chartData} />
+            <StudyChart data={loading ? [] : chartData} />
           </CardContent>
         </Card>
 
@@ -211,7 +247,7 @@ export default function Dashboard() {
           <CardContent>
             <StudyStreak {...streakData} />
             <div className="mt-6">
-              <SubjectProgress subjects={subjects} />
+              <SubjectProgress />
             </div>
           </CardContent>
         </Card>

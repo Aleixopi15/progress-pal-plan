@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Play, Pause, Timer, TimerReset } from "lucide-react";
+import { Clock, Play, Pause, TimerReset } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { formatDuration } from "@/lib/formatters";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -92,7 +92,7 @@ export function StudyTimer() {
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="outline" size="sm" className="gap-1">
-            <Timer className="h-4 w-4" />
+            <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Cronômetro</span>
           </Button>
         </SheetTrigger>

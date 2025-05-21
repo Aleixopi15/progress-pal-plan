@@ -1,5 +1,5 @@
+
 import React, { useState, useEffect } from "react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,11 +24,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { SubscriptionStatus } from "@/lib/subscription";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 
-// Interfaces
+// Define interfaces for our data types
 interface StudySession {
   id: string;
   date: string;
@@ -112,7 +111,7 @@ export default function History() {
     try {
       setLoadingStudy(true);
       
-      const { data: sessionsData, error: sessionsError } = await supabase
+      let query = supabase
         .from("study_sessions")
         .select(`
           *,
@@ -120,6 +119,13 @@ export default function History() {
         `)
         .eq("user_id", user?.id)
         .order("date", { ascending: false });
+      
+      // Apply subject filter if selected
+      if (selectedSubjectId) {
+        query = query.eq("subject_id", selectedSubjectId);
+      }
+
+      const { data: sessionsData, error: sessionsError } = await query;
       
       if (sessionsError) throw sessionsError;
 
@@ -146,7 +152,7 @@ export default function History() {
       setLoadingQuestions(true);
       
       // First get all questions
-      const { data: questionsData, error: questionsError } = await supabase
+      let query = supabase
         .from("questions")
         .select(`
           id, 
@@ -158,10 +164,32 @@ export default function History() {
         .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
       
+      // Apply subject filter if selected and we have topics data
+      if (selectedSubjectId) {
+        // We need to get topic IDs for the selected subject first
+        const { data: topicsData } = await supabase
+          .from("topics")
+          .select("id")
+          .eq("subject_id", selectedSubjectId);
+        
+        if (topicsData && topicsData.length > 0) {
+          const topicIds = topicsData.map(t => t.id);
+          query = query.in("topic_id", topicIds);
+        } else {
+          // If no topics found for this subject, return empty result
+          setQuestions([]);
+          setLoadingQuestions(false);
+          return;
+        }
+      }
+
+      const { data: questionsData, error: questionsError } = await query;
+      
       if (questionsError) throw questionsError;
 
-      if (questionsData.length === 0) {
+      if (!questionsData || questionsData.length === 0) {
         setQuestions([]);
+        setLoadingQuestions(false);
         return;
       }
 
@@ -241,243 +269,240 @@ export default function History() {
     }
   };
 
-  // Filter study sessions by selected subject
-  const filteredStudySessions = selectedSubjectId
-    ? studySessions.filter(session => session.subject_id === selectedSubjectId)
-    : studySessions;
-
-  // Filter questions by selected subject  
-  const filteredQuestions = selectedSubjectId
-    ? questions.filter(question => question.subject_id === selectedSubjectId)
-    : questions;
+  // Effect to refetch data when subject filter changes
+  useEffect(() => {
+    if (user) {
+      if (activeTab === "study") {
+        fetchStudySessions();
+      } else if (activeTab === "questions") {
+        fetchQuestions();
+      }
+    }
+  }, [selectedSubjectId, activeTab]);
 
   const formatSubscriptionStatus = (status: string): SubscriptionStatus => {
-    // Map the string status to the SubscriptionStatus enum
     switch(status) {
       case "active":
         return "active";
       case "canceled":
         return "canceled";
       case "incomplete":
-        return "inactive"; // Fixed: Changed from "pending" to "inactive"
       case "incomplete_expired":
-        return "inactive"; // Fixed: Changed from "expired" to "inactive"
+        return "inactive";
       case "past_due":
         return "past_due";
       case "trialing":
-        return "active"; // Map trialing to active
+        return "active";
       case "unpaid":
-        return "past_due"; // Map unpaid to past_due
+        return "past_due";
       default:
         return "inactive";
     }
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-4">
-        <PageTitle 
-          title="Histórico" 
-          subtitle="Acompanhe seu progresso ao longo do tempo"
-        />
+    <div className="space-y-6 p-4 animate-fade-in">
+      <PageTitle 
+        title="Histórico" 
+        subtitle="Acompanhe seu progresso ao longo do tempo"
+      />
 
-        <div className="flex justify-end">
-          <div className="w-full max-w-xs">
-            <Select 
-              value={selectedSubjectId || ""} 
-              onValueChange={(value) => setSelectedSubjectId(value || null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por matéria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todas as matérias</SelectItem>
-                {subjects.map((subject) => (
-                  <SelectItem key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="flex justify-end">
+        <div className="w-full max-w-xs">
+          <Select 
+            value={selectedSubjectId || ""} 
+            onValueChange={(value) => setSelectedSubjectId(value || null)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Filtrar por matéria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas as matérias</SelectItem>
+              {subjects.map((subject) => (
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="study">Sessões de Estudo</TabsTrigger>
-            <TabsTrigger value="questions">Questões</TabsTrigger>
-            <TabsTrigger value="subscription">Assinatura</TabsTrigger>
-          </TabsList>
-          
-          {/* Sessões de Estudo */}
-          <TabsContent value="study">
-            <Card>
-              <CardHeader>
-                <CardTitle>Sessões de Estudo</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingStudy ? (
-                  <div className="flex justify-center py-8">Carregando...</div>
-                ) : filteredStudySessions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">
-                      {selectedSubjectId ? "Nenhuma sessão para esta matéria" : "Nenhuma sessão de estudo encontrada"}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Registre seu tempo de estudo para começar a acompanhar seu progresso"}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Matéria</TableHead>
-                          <TableHead>Tempo</TableHead>
-                          <TableHead>Detalhes</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredStudySessions.map((session) => (
-                          <TableRow key={session.id}>
-                            <TableCell>
-                              {format(new Date(session.date), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell>{session.subject_name}</TableCell>
-                            <TableCell>{formatMinutesToHoursAndMinutes(session.study_time)}</TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {session.comment || "-"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Questões */}
-          <TabsContent value="questions">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Questões</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingQuestions ? (
-                  <div className="flex justify-center py-8">Carregando...</div>
-                ) : filteredQuestions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">
-                      {selectedSubjectId ? "Nenhuma questão para esta matéria" : "Nenhuma questão encontrada"}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Adicione questões em seus tópicos para começar a acompanhar seu progresso"}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Matéria</TableHead>
-                          <TableHead>Tópico</TableHead>
-                          <TableHead>Resultado</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredQuestions.map((question) => (
-                          <TableRow key={question.id}>
-                            <TableCell>
-                              {format(new Date(question.created_at), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell>{question.subject_name}</TableCell>
-                            <TableCell>{question.topic_name}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                {question.is_correct ? (
-                                  <Check className="h-5 w-5 text-green-600 mr-1" />
-                                ) : (
-                                  <X className="h-5 w-5 text-red-600 mr-1" />
-                                )}
-                                {question.is_correct ? "Acerto" : "Erro"}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Assinatura */}
-          <TabsContent value="subscription">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Assinatura</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingSubscription ? (
-                  <div className="flex justify-center py-8">Carregando...</div>
-                ) : subscriptionHistory.length === 0 ? (
-                  <div className="text-center py-8">
-                    <h3 className="text-lg font-medium">Nenhum histórico de assinatura</h3>
-                    <p className="text-muted-foreground">
-                      Seu histórico de assinatura aparecerá aqui
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Período</TableHead>
-                          <TableHead>ID da Assinatura</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {subscriptionHistory.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              {format(new Date(item.created_at), "dd/MM/yyyy")}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={formatSubscriptionStatus(item.status)} />
-                            </TableCell>
-                            <TableCell>
-                              {item.current_period_start && item.current_period_end ? (
-                                <>
-                                  {format(new Date(item.current_period_start), "dd/MM/yy")} {" - "}
-                                  {format(new Date(item.current_period_end), "dd/MM/yy")}
-                                </>
-                              ) : (
-                                "-"
-                              )}
-                            </TableCell>
-                            <TableCell className="font-mono text-xs">
-                              {item.stripe_subscription_id}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
-    </DashboardLayout>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="study">Sessões de Estudo</TabsTrigger>
+          <TabsTrigger value="questions">Questões</TabsTrigger>
+          <TabsTrigger value="subscription">Assinatura</TabsTrigger>
+        </TabsList>
+        
+        {/* Sessões de Estudo */}
+        <TabsContent value="study">
+          <Card>
+            <CardHeader>
+              <CardTitle>Sessões de Estudo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingStudy ? (
+                <div className="flex justify-center py-8">Carregando...</div>
+              ) : studySessions.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium">
+                    {selectedSubjectId ? "Nenhuma sessão para esta matéria" : "Nenhuma sessão de estudo encontrada"}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Registre seu tempo de estudo para começar a acompanhar seu progresso"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Matéria</TableHead>
+                        <TableHead>Tempo</TableHead>
+                        <TableHead>Detalhes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studySessions.map((session) => (
+                        <TableRow key={session.id}>
+                          <TableCell>
+                            {format(new Date(session.date), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>{session.subject_name || "—"}</TableCell>
+                          <TableCell>{formatMinutesToHoursAndMinutes(session.study_time)}</TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {session.comment || "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Questões */}
+        <TabsContent value="questions">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Questões</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingQuestions ? (
+                <div className="flex justify-center py-8">Carregando...</div>
+              ) : questions.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium">
+                    {selectedSubjectId ? "Nenhuma questão para esta matéria" : "Nenhuma questão encontrada"}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    {selectedSubjectId ? "Selecione outra matéria ou remova o filtro" : "Adicione questões em seus tópicos para começar a acompanhar seu progresso"}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Matéria</TableHead>
+                        <TableHead>Tópico</TableHead>
+                        <TableHead>Resultado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {questions.map((question) => (
+                        <TableRow key={question.id}>
+                          <TableCell>
+                            {format(new Date(question.created_at), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>{question.subject_name}</TableCell>
+                          <TableCell>{question.topic_name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              {question.is_correct ? (
+                                <Check className="h-5 w-5 text-green-600 mr-1" />
+                              ) : (
+                                <X className="h-5 w-5 text-red-600 mr-1" />
+                              )}
+                              {question.is_correct ? "Acerto" : "Erro"}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Assinatura */}
+        <TabsContent value="subscription">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Assinatura</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingSubscription ? (
+                <div className="flex justify-center py-8">Carregando...</div>
+              ) : subscriptionHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <h3 className="text-lg font-medium">Nenhum histórico de assinatura</h3>
+                  <p className="text-muted-foreground">
+                    Seu histórico de assinatura aparecerá aqui
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Período</TableHead>
+                        <TableHead>ID da Assinatura</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {subscriptionHistory.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            {format(new Date(item.created_at), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={formatSubscriptionStatus(item.status)} />
+                          </TableCell>
+                          <TableCell>
+                            {item.current_period_start && item.current_period_end ? (
+                              <>
+                                {format(new Date(item.current_period_start), "dd/MM/yy")} {" - "}
+                                {format(new Date(item.current_period_end), "dd/MM/yy")}
+                              </>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {item.stripe_subscription_id}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
