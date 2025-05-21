@@ -326,11 +326,15 @@ export function AddStudyTimeDialog({
                   <SelectValue placeholder="Selecione um tópico" />
                 </SelectTrigger>
                 <SelectContent>
-                  {topics.map((topic) => (
-                    <SelectItem key={topic.id} value={topic.id}>
-                      {topic.name}
-                    </SelectItem>
-                  ))}
+                  {topics.length > 0 ? (
+                    topics.map((topic) => (
+                      <SelectItem key={topic.id} value={topic.id}>
+                        {topic.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-topics" disabled>Nenhum tópico disponível</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
