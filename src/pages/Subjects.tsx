@@ -176,7 +176,7 @@ export default function Subjects() {
   };
 
   return (
-    <DashboardLayout>
+    <div className="animate-fade-in">
       <div className="space-y-6 p-4">
         <PageTitle 
           title="Matérias" 
@@ -315,6 +315,6 @@ export default function Subjects() {
         subject={currentSubject}
         onSuccess={fetchSubjects}
       />
-    </DashboardLayout>
+    </div>
   );
 }
