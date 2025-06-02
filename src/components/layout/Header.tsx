@@ -1,82 +1,67 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Bell, Search, LogOut } from "lucide-react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
+import { Bell, Search, ChevronDown } from "lucide-react";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel, 
-  DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export function Header() {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  
-  // Obter iniciais do nome do usuário a partir dos metadados se disponíveis
-  const userMetadata = user?.user_metadata as { nome?: string; sobrenome?: string } | undefined;
-  const nome = userMetadata?.nome || 'Usuário';
-  const sobrenome = userMetadata?.sobrenome || '';
-  
-  const initials = nome && sobrenome
-    ? `${nome[0]}${sobrenome[0]}`.toUpperCase()
-    : nome
-      ? nome[0].toUpperCase()
-      : 'U';
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
-      <div className="hidden lg:flex lg:items-center">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold text-lg">
-          <span className="font-bold text-primary">StudyPlan</span>
-        </Link>
+    <header className="flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
+      <div className="flex items-center gap-4">
+        <SidebarTrigger />
+        
+        <div className="relative hidden md:block">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar..."
+            className="pl-8 md:w-[300px] lg:w-[400px]"
+          />
+        </div>
       </div>
 
-      <div className="ml-auto flex items-center gap-4">
-        <Button variant="ghost" size="icon">
-          <Search className="h-5 w-5" />
-          <span className="sr-only">Pesquisar</span>
-        </Button>
-
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notificações</span>
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-4 w-4" />
+          <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-600 text-[10px] font-medium text-white flex items-center justify-center">
+            3
+          </span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar>
-                <AvatarImage src="" />
-                <AvatarFallback>{initials}</AvatarFallback>
+            <Button variant="ghost" className="flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback>
+                  {user?.email?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
               </Avatar>
+              <span className="hidden md:block">{user?.email}</span>
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Minha conta</DropdownMenuLabel>
-            <DropdownMenuLabel className="font-normal text-sm text-muted-foreground">
-              {nome} {sobrenome}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/profile">Perfil</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings">Configurações</Link>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
