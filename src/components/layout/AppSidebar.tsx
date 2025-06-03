@@ -45,8 +45,8 @@ export function AppSidebar() {
   const path = location.pathname;
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
+    <Sidebar collapsible="icon" className="border-r bg-background">
+      <SidebarHeader className="border-b bg-background">
         <div className="flex items-center gap-2 px-4 py-2">
           <Link to="/" className="flex items-center gap-2">
             <h2 className={`font-bold tracking-tight transition-all ${
@@ -58,7 +58,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="bg-background">
         <SidebarGroup>
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>

@@ -39,11 +39,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/settings" element={
                 <RequireAuth>
-                  <div className="flex min-h-screen">
-                    <div className="flex flex-1 flex-col">
-                      <main className="flex-1 px-4 py-6 md:px-6"><Settings /></main>
-                    </div>
-                  </div>
+                  <Settings />
                 </RequireAuth>
               } />
               <Route path="/dashboard" element={
