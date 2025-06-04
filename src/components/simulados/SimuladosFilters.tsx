@@ -61,14 +61,13 @@ export function SimuladosFilters({ filters, onFiltersChange, simulados }: Simula
           <div>
             <label className="text-sm font-medium mb-2 block">Ano</label>
             <Select
-              value={filters.ano}
-              onValueChange={(value) => onFiltersChange({ ...filters, ano: value })}
+              value={filters.ano || undefined}
+              onValueChange={(value) => onFiltersChange({ ...filters, ano: value || "" })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todos os anos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os anos</SelectItem>
                 {uniqueYears.map((year) => (
                   <SelectItem key={year} value={year}>
                     {year}
@@ -81,14 +80,13 @@ export function SimuladosFilters({ filters, onFiltersChange, simulados }: Simula
           <div>
             <label className="text-sm font-medium mb-2 block">Instituição</label>
             <Select
-              value={filters.instituicao}
-              onValueChange={(value) => onFiltersChange({ ...filters, instituicao: value })}
+              value={filters.instituicao || undefined}
+              onValueChange={(value) => onFiltersChange({ ...filters, instituicao: value || "" })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todas as instituições" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as instituições</SelectItem>
                 {uniqueInstituicoes.map((inst) => (
                   <SelectItem key={inst} value={inst}>
                     {inst}
@@ -101,14 +99,13 @@ export function SimuladosFilters({ filters, onFiltersChange, simulados }: Simula
           <div>
             <label className="text-sm font-medium mb-2 block">Área de Conhecimento</label>
             <Select
-              value={filters.area}
-              onValueChange={(value) => onFiltersChange({ ...filters, area: value })}
+              value={filters.area || undefined}
+              onValueChange={(value) => onFiltersChange({ ...filters, area: value || "" })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todas as áreas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as áreas</SelectItem>
                 <SelectItem value="linguagens">Linguagens</SelectItem>
                 <SelectItem value="humanas">Ciências Humanas</SelectItem>
                 <SelectItem value="natureza">Ciências da Natureza</SelectItem>
