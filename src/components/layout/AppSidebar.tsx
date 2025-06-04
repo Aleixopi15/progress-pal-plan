@@ -11,7 +11,8 @@ import {
   BookOpen,
   Clock,
   LayoutDashboard,
-  History
+  History,
+  FileText
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,6 +34,7 @@ const navigationItems = [
   { href: "/goals", label: "Metas", icon: Target },
   { href: "/resources", label: "Recursos", icon: Bookmark },
   { href: "/subjects", label: "Matérias", icon: BookOpen },
+  { href: "/simulados", label: "Simulados", icon: FileText },
   { href: "/activity", label: "Atividades", icon: Clock },
   { href: "/history", label: "Histórico", icon: History },
   { href: "/profile", label: "Perfil", icon: User },
