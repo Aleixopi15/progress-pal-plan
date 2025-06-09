@@ -8,7 +8,7 @@ import { StudyStreak } from "@/components/dashboard/StudyStreak";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
 import { NextStudySessions } from "@/components/dashboard/NextStudySessions";
 import { Button } from "@/components/ui/button";
-import { Clock, BookOpen, Target, Award } from "lucide-react";
+import { Clock, BookOpen, Target, Award, Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -21,7 +21,11 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [totalStudyMinutes, setTotalStudyMinutes] = useState(0);
+  const [weeklyStudyMinutes, setWeeklyStudyMinutes] = useState(0);
   const [dailyTarget, setDailyTarget] = useState(360); // 6 hours in minutes
+  const [weeklyTarget, setWeeklyTarget] = useState(2400); // 40 hours in minutes
+  const [daysUntilExam, setDaysUntilExam] = useState<number | null>(null);
+  const [examInfo, setExamInfo] = useState<string>("");
   const [tasksData, setTasksData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [streakData, setStreakData] = useState({
@@ -31,14 +35,38 @@ export default function Dashboard() {
   
   useEffect(() => {
     if (user) {
-      fetchStudyData();
+      fetchDashboardData();
     }
   }, [user]);
 
-  // Fetch total study time and other data
-  const fetchStudyData = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      
+      // Fetch user settings
+      const { data: userSettings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (userSettings) {
+        const weeklyTargetHours = userSettings.meta_horas_semanais || 40;
+        setWeeklyTarget(weeklyTargetHours * 60); // Convert to minutes
+        setDailyTarget(Math.round((weeklyTargetHours * 60) / 7)); // Daily target in minutes
+
+        if (userSettings.data_prova) {
+          const examDate = new Date(userSettings.data_prova);
+          const today = new Date();
+          const diffTime = examDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setDaysUntilExam(diffDays > 0 ? diffDays : 0);
+        }
+
+        if (userSettings.vestibular_pretendido) {
+          setExamInfo(userSettings.vestibular_pretendido);
+        }
+      }
       
       // Fetch all study sessions to calculate total time
       const { data: studySessions, error: studyError } = await supabase
@@ -52,10 +80,21 @@ export default function Dashboard() {
       // Calculate total minutes studied
       const totalMinutes = studySessions?.reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
       setTotalStudyMinutes(totalMinutes);
+
+      // Calculate weekly study minutes (last 7 days)
+      const today = new Date();
+      const lastWeek = new Date();
+      lastWeek.setDate(today.getDate() - 7);
+      
+      const weeklyMinutes = studySessions?.filter(session => {
+        const sessionDate = new Date(session.date);
+        return sessionDate >= lastWeek;
+      }).reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
+      
+      setWeeklyStudyMinutes(weeklyMinutes);
       
       // Generate chart data from actual study sessions
       const last7Days = [];
-      const today = new Date();
       
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -67,7 +106,7 @@ export default function Dashboard() {
           name: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()],
           dayOfWeek: date.getDay(),
           hours: 0,
-          goal: date.getDay() === 0 || date.getDay() === 6 ? 2 : 4 // Weekend: 2h, Weekday: 4h
+          goal: Math.round(dailyTarget / 60 * 10) / 10 // Convert to hours with 1 decimal
         });
       }
       
@@ -147,11 +186,11 @@ export default function Dashboard() {
       setTasksData(formattedTasks);
       
     } catch (error) {
-      console.error("Error fetching study data:", error);
+      console.error("Error fetching dashboard data:", error);
       toast({
         variant: "destructive",
         title: "Erro ao carregar dados",
-        description: "Não foi possível obter os dados de estudo"
+        description: "Não foi possível obter os dados do dashboard"
       });
     } finally {
       setLoading(false);
@@ -194,6 +233,8 @@ export default function Dashboard() {
     },
   ];
 
+  const weeklyProgress = weeklyTarget > 0 ? Math.round((weeklyStudyMinutes / weeklyTarget) * 100) : 0;
+
   return (
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
@@ -203,24 +244,45 @@ export default function Dashboard() {
         <StudyTimeButton />
       </div>
 
+      {/* Exam countdown banner */}
+      {daysUntilExam !== null && examInfo && (
+        <Card className="mb-6 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-8 w-8 text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold">{examInfo}</h3>
+                  <p className="text-muted-foreground">
+                    Faltam <span className="font-bold text-primary">{daysUntilExam} dias</span> para sua prova
+                  </p>
+                </div>
+              </div>
+              <TrendingUp className="h-6 w-6 text-secondary" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-4">
         <StatCard
           title="Horas Estudadas Total"
           value={formatMinutesToHoursAndMinutes(totalStudyMinutes)}
           icon={<Clock className="h-5 w-5" />}
-          description={`Meta diária: ${formatMinutesToHoursAndMinutes(dailyTarget)}`}
+          description={`Acumulado desde o início`}
+        />
+        <StatCard
+          title="Progresso Semanal"
+          value={`${weeklyProgress}%`}
+          icon={<Target className="h-5 w-5" />}
+          description={`${formatMinutesToHoursAndMinutes(weeklyStudyMinutes)} de ${formatMinutesToHoursAndMinutes(weeklyTarget)}`}
+          trend={{ value: weeklyProgress >= 100 ? 100 : weeklyProgress, isPositive: weeklyProgress >= 80 }}
         />
         <StatCard
           title="Total de Matérias"
           value="8"
           icon={<BookOpen className="h-5 w-5" />}
           description="2 matérias em dia"
-        />
-        <StatCard
-          title="Metas Concluídas"
-          value="5/9"
-          icon={<Target className="h-5 w-5" />}
-          trend={{ value: 15, isPositive: true }}
         />
         <StatCard
           title="Streak Atual"

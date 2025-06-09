@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AuthProvider, RequireAuth } from "@/lib/auth";
 import { SubscriptionProvider } from "@/lib/subscription";
-import { RequireSubscription } from "@/components/subscription/RequireSubscription";
 import { ThemeProvider } from "@/hooks/useTheme";
 import HomePage from "./pages/HomePage";
 import Index from "./pages/Index";

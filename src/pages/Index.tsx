@@ -12,6 +12,8 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, Target } from "lucide-react";
 
 export default function Index() {
   const { user } = useAuth();
@@ -22,6 +24,12 @@ export default function Index() {
     correctPercentage: 0,
     chartData: [],
     streakData: { currentStreak: 0, days: [] }
+  });
+  const [userSettings, setUserSettings] = useState({
+    daysUntilExam: null,
+    examName: "",
+    weeklyGoal: 40,
+    weeklyProgress: 0
   });
   const [tasks, setTasks] = useState([]);
   const [sessions, setSessions] = useState([]);
@@ -36,6 +44,31 @@ export default function Index() {
   async function fetchDashboardData() {
     try {
       setLoading(true);
+      
+      // Fetch user settings
+      const { data: settings } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (settings) {
+        let daysUntilExam = null;
+        if (settings.data_prova) {
+          const examDate = new Date(settings.data_prova);
+          const today = new Date();
+          const diffTime = examDate.getTime() - today.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          daysUntilExam = diffDays > 0 ? diffDays : 0;
+        }
+
+        setUserSettings({
+          daysUntilExam,
+          examName: settings.vestibular_pretendido || "",
+          weeklyGoal: settings.meta_horas_semanais || 40,
+          weeklyProgress: 0
+        });
+      }
       
       // Fetch study sessions data for stats
       const { data: studySessions, error: sessionsError } = await supabase
@@ -53,6 +86,20 @@ export default function Index() {
       // Calculate total study minutes
       const totalMinutes = studySessions?.reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
       
+      // Calculate weekly study minutes (last 7 days)
+      const today = new Date();
+      const lastWeek = new Date();
+      lastWeek.setDate(today.getDate() - 7);
+      
+      const weeklyMinutes = studySessions?.filter(session => {
+        const sessionDate = new Date(session.date);
+        return sessionDate >= lastWeek;
+      }).reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
+      
+      const weeklyProgress = userSettings.weeklyGoal > 0 ? Math.round((weeklyMinutes / (userSettings.weeklyGoal * 60)) * 100) : 0;
+      
+      setUserSettings(prev => ({ ...prev, weeklyProgress }));
+      
       // Fetch questions data
       const { data: questions, error: questionsError } = await supabase
         .from("questions")
@@ -68,7 +115,6 @@ export default function Index() {
       
       // Generate chart data from actual study sessions
       const getDayInitials = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-      const today = new Date();
       const last7Days = Array(7).fill(0).map((_, i) => {
         const date = new Date();
         date.setDate(today.getDate() - (6 - i));
@@ -208,6 +254,41 @@ export default function Index() {
         </div>
         <StudyTimeButton />
       </div>
+
+      {/* Exam countdown and goals */}
+      {(userSettings.daysUntilExam !== null || userSettings.weeklyGoal) && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {userSettings.daysUntilExam !== null && userSettings.examName && (
+            <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-6 w-6 text-primary" />
+                  <div>
+                    <h3 className="font-semibold">{userSettings.examName}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Faltam <span className="font-bold text-primary">{userSettings.daysUntilExam} dias</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <Card className="bg-gradient-to-r from-secondary/10 to-accent/10 border-secondary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Target className="h-6 w-6 text-secondary" />
+                <div>
+                  <h3 className="font-semibold">Meta Semanal</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {userSettings.weeklyProgress}% de {userSettings.weeklyGoal}h concluída
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Adiciona o banner de assinatura quando necessário */}
       <SubscriptionBanner />

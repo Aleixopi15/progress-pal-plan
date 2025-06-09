@@ -112,6 +112,60 @@ export type Database = {
           },
         ]
       }
+      simulados: {
+        Row: {
+          created_at: string
+          data: string
+          humanas: number | null
+          id: string
+          instituicao: string
+          linguagens: number | null
+          matematica: number | null
+          natureza: number | null
+          nome: string
+          nota_total: number | null
+          questoes_acertadas: number | null
+          questoes_totais: number | null
+          redacao: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          humanas?: number | null
+          id?: string
+          instituicao: string
+          linguagens?: number | null
+          matematica?: number | null
+          natureza?: number | null
+          nome: string
+          nota_total?: number | null
+          questoes_acertadas?: number | null
+          questoes_totais?: number | null
+          redacao?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          humanas?: number | null
+          id?: string
+          instituicao?: string
+          linguagens?: number | null
+          matematica?: number | null
+          natureza?: number | null
+          nome?: string
+          nota_total?: number | null
+          questoes_acertadas?: number | null
+          questoes_totais?: number | null
+          redacao?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_sessions: {
         Row: {
           comment: string | null
@@ -284,6 +338,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          data_prova: string | null
+          id: string
+          meta_horas_semanais: number | null
+          updated_at: string
+          user_id: string
+          vestibular_pretendido: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_prova?: string | null
+          id?: string
+          meta_horas_semanais?: number | null
+          updated_at?: string
+          user_id: string
+          vestibular_pretendido?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_prova?: string | null
+          id?: string
+          meta_horas_semanais?: number | null
+          updated_at?: string
+          user_id?: string
+          vestibular_pretendido?: string | null
+        }
+        Relationships: []
       }
       user_subscriptions: {
         Row: {
