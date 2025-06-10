@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress as ProgressBar } from "@/components/ui/progress";
-import { BarChart, BarChart2, BookOpen, Calendar, Clock, Target } from "lucide-react";
+import { BarChart, BarChart2, BookOpen, Calendar, Clock, Target, TrendingUp } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart as RechartsBarChart, CartesianGrid, Legend, 
   Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,8 @@ export default function Progress() {
     weeklyData: [],
     subjectTimeDistribution: [],
     simulationScores: [],
-    questionStats: { total: 0, correct: 0 }
+    questionStats: { total: 0, correct: 0 },
+    topicsStats: { total: 0, completed: 0 }
   });
   
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function Progress() {
       // 2. Fetch all topics to calculate subject progress
       const { data: topicsData, error: topicsError } = await supabase
         .from("topics")
-        .select("id, subject_id")
+        .select("id, subject_id, is_completed")
         .eq("user_id", user?.id);
         
       if (topicsError) throw topicsError;
@@ -70,12 +71,23 @@ export default function Progress() {
         .order("date");
         
       if (sessionsError) throw sessionsError;
+
+      // 5. Fetch simulados data
+      const { data: simuladosData, error: simuladosError } = await supabase
+        .from("simulados")
+        .select("nota_total, data")
+        .eq("user_id", user?.id)
+        .order("data", { ascending: false })
+        .limit(10);
+        
+      if (simuladosError) throw simuladosError;
       
-      // Calculate subjects with progress
+      // Calculate subjects with progress based on completed topics
       const subjectsWithProgress = subjectsData.map(subject => {
         // Get topics for this subject
         const subjectTopics = topicsData.filter(topic => topic.subject_id === subject.id);
         const totalTopics = subjectTopics.length;
+        const completedTopics = subjectTopics.filter(topic => topic.is_completed).length;
         
         // Get questions for these topics
         const topicIds = subjectTopics.map(topic => topic.id);
@@ -83,9 +95,9 @@ export default function Progress() {
         const totalQuestions = subjectQuestions.length;
         const correctQuestions = subjectQuestions.filter(q => q.is_correct).length;
         
-        // Calculate progress percentage
-        const progress = totalQuestions > 0 
-          ? Math.round((correctQuestions / totalQuestions) * 100) 
+        // Calculate progress based on completed topics
+        const progress = totalTopics > 0 
+          ? Math.round((completedTopics / totalTopics) * 100) 
           : 0;
         
         return {
@@ -93,6 +105,7 @@ export default function Progress() {
           name: subject.name,
           progress,
           totalTopics,
+          completedTopics,
           totalQuestions,
           correctQuestions
         };
@@ -107,18 +120,21 @@ export default function Progress() {
       // Count distinct study days
       const uniqueDays = new Set(sessionsData.map(session => session.date)).size;
       
+      // Calculate topics stats
+      const totalTopics = topicsData.length;
+      const completedTopics = topicsData.filter(topic => topic.is_completed).length;
+      const topicsProgress = totalTopics > 0 
+        ? Math.round((completedTopics / totalTopics) * 100)
+        : 0;
+      
       // Calculate questions stats
       const totalQuestions = questionsData.length;
       const correctQuestions = questionsData.filter(q => q.is_correct).length;
       const overallProgress = totalQuestions > 0 
         ? Math.round((correctQuestions / totalQuestions) * 100)
-        : 0;
+        : topicsProgress; // Use topics progress if no questions
       
       // Process weekly data
-      const last30Days = [];
-      const today = new Date();
-      
-      // Create weekly data for chart
       const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       const weeklyData = weekDays.map(day => ({ day, hours: 0 }));
       
@@ -126,7 +142,6 @@ export default function Progress() {
       sessionsData.forEach(session => {
         const sessionDate = new Date(session.date);
         const dayOfWeek = sessionDate.getDay();
-        const dayName = weekDays[dayOfWeek];
         const hours = session.study_time / 60;
         
         weeklyData[dayOfWeek].hours += hours;
@@ -155,14 +170,11 @@ export default function Progress() {
         };
       }).sort((a, b) => b.hours - a.hours); // Sort by hours descending
       
-      // Create mock simulation scores (these would come from a real table in a full implementation)
-      const simulationScores = [
-        { id: 1, score: 65 },
-        { id: 2, score: 70 },
-        { id: 3, score: 68 },
-        { id: 4, score: 75 },
-        { id: 5, score: 82 },
-      ];
+      // Process simulados scores for chart
+      const simulationScores = simuladosData.map((simulado, index) => ({
+        simulado: `Sim ${index + 1}`,
+        score: simulado.nota_total || 0
+      }));
       
       // Update all progress stats
       setStudyStats({
@@ -173,7 +185,8 @@ export default function Progress() {
         weeklyData,
         subjectTimeDistribution,
         simulationScores,
-        questionStats: { total: totalQuestions, correct: correctQuestions }
+        questionStats: { total: totalQuestions, correct: correctQuestions },
+        topicsStats: { total: totalTopics, completed: completedTopics }
       });
       
     } catch (error) {
@@ -203,11 +216,55 @@ export default function Progress() {
     <div className="animate-fade-in">
       <PageTitle title="Progresso" subtitle="Acompanhe sua evolução nos estudos" />
       
+      {/* Estatísticas principais */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center p-4">
+              <Clock className="h-8 w-8 text-primary mb-2" />
+              <h3 className="text-2xl font-bold">{studyStats.totalHours}h</h3>
+              <p className="text-sm text-muted-foreground">Horas Totais</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center p-4">
+              <BookOpen className="h-8 w-8 text-primary mb-2" />
+              <h3 className="text-2xl font-bold">{studyStats.topicsStats.completed}/{studyStats.topicsStats.total}</h3>
+              <p className="text-sm text-muted-foreground">Tópicos Concluídos</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center p-4">
+              <Target className="h-8 w-8 text-primary mb-2" />
+              <h3 className="text-2xl font-bold">{studyStats.questionStats.correct}/{studyStats.questionStats.total}</h3>
+              <p className="text-sm text-muted-foreground">Questões Corretas</p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center p-4">
+              <TrendingUp className="h-8 w-8 text-primary mb-2" />
+              <h3 className="text-2xl font-bold">{studyStats.overallProgress}%</h3>
+              <p className="text-sm text-muted-foreground">Progresso Geral</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Content with real progress statistics */}
       <div className="mt-6 grid grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Progresso por Disciplina</CardTitle>
+            <CardDescription>Baseado em tópicos concluídos</CardDescription>
           </CardHeader>
           <CardContent>
             {subjects.length === 0 ? (
@@ -228,8 +285,8 @@ export default function Progress() {
                     </div>
                     <ProgressBar value={subject.progress} className="h-2" />
                     <div className="text-xs text-muted-foreground">
-                      {subject.correctQuestions} de {subject.totalQuestions} questões corretas
-                      • {subject.totalTopics} tópicos
+                      {subject.completedTopics} de {subject.totalTopics} tópicos concluídos
+                      {subject.totalQuestions > 0 && ` • ${subject.correctQuestions} de ${subject.totalQuestions} questões corretas`}
                     </div>
                   </div>
                 ))}
@@ -259,77 +316,34 @@ export default function Progress() {
           
           <Card>
             <CardHeader>
-              <CardTitle>Progresso ao Longo do Tempo</CardTitle>
-              <CardDescription>Tendência de acertos</CardDescription>
+              <CardTitle>Desempenho em Simulados</CardTitle>
+              <CardDescription>Últimos simulados realizados</CardDescription>
             </CardHeader>
             <CardContent>
-              {studyStats.questionStats.total > 0 ? (
+              {studyStats.simulationScores.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart
-                    data={[
-                      { day: '1', progress: Math.round(studyStats.overallProgress * 0.3) },
-                      { day: '5', progress: Math.round(studyStats.overallProgress * 0.4) },
-                      { day: '10', progress: Math.round(studyStats.overallProgress * 0.5) },
-                      { day: '15', progress: Math.round(studyStats.overallProgress * 0.7) },
-                      { day: '20', progress: Math.round(studyStats.overallProgress * 0.8) },
-                      { day: '25', progress: Math.round(studyStats.overallProgress * 0.9) },
-                      { day: '30', progress: studyStats.overallProgress },
-                    ]}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} axisLine={false} tickLine={false} />
-                    <Tooltip formatter={(value) => [`${value}%`]} />
+                  <LineChart data={studyStats.simulationScores}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="simulado" axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, 1000]} axisLine={false} tickLine={false} />
+                    <Tooltip formatter={(value) => [`${value} pontos`]} />
                     <Line 
                       type="monotone" 
-                      dataKey="progress" 
+                      dataKey="score" 
                       stroke="hsl(var(--primary))" 
-                      name="Progresso %" 
+                      name="Pontuação" 
                       strokeWidth={2}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-[300px]">
-                  <p className="text-muted-foreground">Ainda não há dados suficientes</p>
+                  <p className="text-muted-foreground">Nenhum simulado registrado ainda</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Estatísticas de Estudo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-                <Clock className="h-8 w-8 text-primary mb-2" />
-                <h3 className="text-2xl font-bold">{studyStats.totalHours}</h3>
-                <p className="text-sm text-muted-foreground">Horas Totais</p>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-                <Calendar className="h-8 w-8 text-primary mb-2" />
-                <h3 className="text-2xl font-bold">{studyStats.studyDays}</h3>
-                <p className="text-sm text-muted-foreground">Dias de Estudo</p>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-                <BookOpen className="h-8 w-8 text-primary mb-2" />
-                <h3 className="text-2xl font-bold">{studyStats.subjectsCount}</h3>
-                <p className="text-sm text-muted-foreground">Matérias</p>
-              </div>
-              
-              <div className="flex flex-col items-center justify-center p-4 border rounded-lg">
-                <Target className="h-8 w-8 text-primary mb-2" />
-                <h3 className="text-2xl font-bold">{studyStats.overallProgress}%</h3>
-                <p className="text-sm text-muted-foreground">Progresso Geral</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
         
         <Card>
           <CardHeader>
@@ -367,79 +381,6 @@ export default function Progress() {
             )}
           </CardContent>
         </Card>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Desempenho em Simulados</CardTitle>
-              <CardDescription>Últimos 5 simulados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={studyStats.simulationScores}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="id" label={{ value: 'Simulado', position: 'insideBottom', offset: -5 }} />
-                  <YAxis domain={[0, 100]} label={{ value: 'Pontuação', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip formatter={(value) => [`${value} pontos`]} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="score" 
-                    stroke="hsl(var(--primary))" 
-                    name="Pontuação" 
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Progresso nas Metas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Meta de Estudo Semanal</span>
-                    <span>24/30 horas</span>
-                  </div>
-                  <ProgressBar value={80} className="h-2" />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Conclusão do Material</span>
-                    <span>{studyStats.overallProgress}/100 %</span>
-                  </div>
-                  <ProgressBar value={studyStats.overallProgress} className="h-2" />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Exercícios Resolvidos</span>
-                    <span>{studyStats.questionStats.correct}/{studyStats.questionStats.total}</span>
-                  </div>
-                  <ProgressBar 
-                    value={studyStats.questionStats.total > 0 
-                      ? Math.round((studyStats.questionStats.correct / studyStats.questionStats.total) * 100)
-                      : 0
-                    } 
-                    className="h-2" 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Simulados Realizados</span>
-                    <span>5/10</span>
-                  </div>
-                  <ProgressBar value={50} className="h-2" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   );

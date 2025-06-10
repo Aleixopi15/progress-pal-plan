@@ -12,6 +12,7 @@ export interface SubjectProgressProps {
     progress: number;
     color?: string;
     totalTopics?: number;
+    completedTopics?: number;
     totalQuestions?: number;
     correctQuestions?: number;
   }[];
@@ -56,10 +57,12 @@ export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps
             // Busca os tópicos da matéria
             const { data: topicsData } = await supabase
               .from("topics")
-              .select("id")
+              .select("id, is_completed")
               .eq("subject_id", subject.id);
             
             const totalTopics = topicsData?.length || 0;
+            const completedTopics = topicsData?.filter(topic => topic.is_completed)?.length || 0;
+            
             let totalQuestions = 0;
             let correctQuestions = 0;
             
@@ -76,13 +79,14 @@ export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps
               correctQuestions = questionsData?.filter(q => q.is_correct)?.length || 0;
             }
             
-            // Calcula o progresso
-            const progress = totalQuestions === 0 ? 0 : Math.round((correctQuestions / totalQuestions) * 100);
+            // Calcula o progresso baseado em tópicos concluídos
+            const progress = totalTopics === 0 ? 0 : Math.round((completedTopics / totalTopics) * 100);
             
             return {
               id: subject.id,
               name: subject.name,
               totalTopics,
+              completedTopics,
               totalQuestions,
               correctQuestions,
               progress
@@ -104,7 +108,7 @@ export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps
       <Card>
         <CardHeader>
           <CardTitle>Progresso das Matérias</CardTitle>
-          <CardDescription>Seu desempenho em cada matéria</CardDescription>
+          <CardDescription>Seu progresso em cada matéria</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">Carregando progresso...</div>
@@ -117,7 +121,7 @@ export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps
     <Card>
       <CardHeader>
         <CardTitle>Progresso das Matérias</CardTitle>
-        <CardDescription>Seu desempenho em cada matéria</CardDescription>
+        <CardDescription>Progresso baseado em tópicos concluídos</CardDescription>
       </CardHeader>
       <CardContent>
         {subjects && subjects.length === 0 ? (
@@ -132,7 +136,8 @@ export function SubjectProgress({ subjects: propSubjects }: SubjectProgressProps
                   <div>
                     <p className="font-semibold">{subject.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {subject.totalTopics} tópicos • {subject.correctQuestions} de {subject.totalQuestions} questões corretas
+                      {subject.completedTopics} de {subject.totalTopics} tópicos concluídos
+                      {subject.totalQuestions > 0 && ` • ${subject.correctQuestions} de ${subject.totalQuestions} questões corretas`}
                     </p>
                   </div>
                   <span className="text-sm font-medium">{subject.progress}%</span>

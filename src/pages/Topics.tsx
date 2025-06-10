@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Table, 
   TableBody, 
@@ -26,6 +27,8 @@ export interface Topic {
   subject_id: string;
   user_id: string;
   created_at: string;
+  is_completed: boolean;
+  completed_at: string | null;
 }
 
 export default function Topics() {
@@ -98,6 +101,43 @@ export default function Topics() {
     }
   }
 
+  const handleToggleComplete = async (topicId: string, isCompleted: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('topics')
+        .update({ 
+          is_completed: !isCompleted,
+          completed_at: !isCompleted ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      // Atualizar o estado local
+      setTopics(topics.map(topic => 
+        topic.id === topicId 
+          ? { 
+              ...topic, 
+              is_completed: !isCompleted,
+              completed_at: !isCompleted ? new Date().toISOString() : null
+            }
+          : topic
+      ));
+
+      toast({
+        title: !isCompleted ? "Tópico marcado como concluído" : "Tópico desmarcado como concluído",
+        description: !isCompleted ? "Parabéns pelo progresso!" : "Tópico marcado como não concluído."
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar tópico",
+        description: error.message || "Ocorreu um erro ao atualizar o status do tópico."
+      });
+    }
+  };
+
   const handleAddTopic = () => {
     setCurrentTopic(null);
     setIsDialogOpen(true);
@@ -138,12 +178,16 @@ export default function Topics() {
     }
   };
 
+  const completedTopics = topics.filter(topic => topic.is_completed).length;
+  const totalTopics = topics.length;
+  const completionPercentage = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4">
         <PageTitle 
           title={subject?.name || "Tópicos"} 
-          subtitle="Gerencie os tópicos desta matéria"
+          subtitle={`${completedTopics} de ${totalTopics} tópicos concluídos (${completionPercentage}%)`}
         >
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => navigate('/subjects')}>
@@ -174,6 +218,7 @@ export default function Topics() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[50px]">Status</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead className="hidden md:table-cell">Descrição</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -181,9 +226,19 @@ export default function Topics() {
                 </TableHeader>
                 <TableBody>
                   {topics.map((topic) => (
-                    <TableRow key={topic.id}>
-                      <TableCell className="font-medium">{topic.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">{topic.description}</TableCell>
+                    <TableRow key={topic.id} className={topic.is_completed ? "opacity-75" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={topic.is_completed}
+                          onCheckedChange={() => handleToggleComplete(topic.id, topic.is_completed)}
+                        />
+                      </TableCell>
+                      <TableCell className={`font-medium ${topic.is_completed ? "line-through" : ""}`}>
+                        {topic.name}
+                      </TableCell>
+                      <TableCell className={`hidden md:table-cell ${topic.is_completed ? "line-through" : ""}`}>
+                        {topic.description}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button variant="outline" size="icon" onClick={() => handleOpenNotes(topic.id)}>

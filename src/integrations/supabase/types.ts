@@ -303,27 +303,33 @@ export type Database = {
       }
       topics: {
         Row: {
+          completed_at: string | null
           created_at: string
           description: string | null
           id: string
+          is_completed: boolean
           name: string
           subject_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_completed?: boolean
           name: string
           subject_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          completed_at?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          is_completed?: boolean
           name?: string
           subject_id?: string
           updated_at?: string
