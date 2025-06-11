@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button";
 import { AddStudyTimeDialog } from "./AddStudyTimeDialog";
 import { StudyTimer } from "./StudyTimer";
 
-export function StudyTimeButton() {
+interface StudyTimeButtonProps {
+  onStudyTimeAdded?: () => void;
+}
+
+export function StudyTimeButton({ onStudyTimeAdded }: StudyTimeButtonProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleStudyTimeAdded = () => {
+    if (onStudyTimeAdded) {
+      onStudyTimeAdded();
+    }
+  };
 
   return (
     <div className="flex gap-2">
@@ -25,6 +35,7 @@ export function StudyTimeButton() {
       <AddStudyTimeDialog 
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
+        onStudyTimeAdded={handleStudyTimeAdded}
       />
     </div>
   );

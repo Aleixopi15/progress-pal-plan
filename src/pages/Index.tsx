@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
@@ -35,13 +34,9 @@ export default function Index() {
   const [sessions, setSessions] = useState([]);
   
   // Fetch dashboard data
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user]);
-
-  async function fetchDashboardData() {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       
@@ -233,7 +228,18 @@ export default function Index() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, fetchDashboardData]);
+
+  const handleStudyTimeAdded = () => {
+    // Recarrega os dados do dashboard quando uma nova sessão de estudo é adicionada
+    fetchDashboardData();
+  };
 
   if (loading) {
     return (
@@ -252,7 +258,7 @@ export default function Index() {
           <h1 className="text-3xl font-bold tracking-tight">Olá, {user?.user_metadata?.nome || 'Estudante'}</h1>
           <p className="text-muted-foreground">Veja seu progresso e continue os estudos</p>
         </div>
-        <StudyTimeButton />
+        <StudyTimeButton onStudyTimeAdded={handleStudyTimeAdded} />
       </div>
 
       {/* Exam countdown and goals */}

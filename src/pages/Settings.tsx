@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Target, Trophy } from "lucide-react";
+import { Calendar, Target, Trophy, CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useSubscription } from "@/lib/subscription";
+import { SubscriptionInfo } from "@/components/subscription/SubscriptionInfo";
+import { SubscriptionPlans } from "@/components/subscription/SubscriptionPlans";
 
 interface UserSettings {
   data_prova: string;
@@ -160,7 +162,7 @@ export default function Settings() {
       <Tabs defaultValue="study" className="mt-8">
         <TabsList>
           <TabsTrigger value="study">Configurações de Estudo</TabsTrigger>
-          <TabsTrigger value="account">Conta</TabsTrigger>
+          <TabsTrigger value="account">Gerenciamento de Conta</TabsTrigger>
         </TabsList>
         
         <TabsContent value="study" className="space-y-6">
@@ -243,14 +245,30 @@ export default function Settings() {
           </div>
         </TabsContent>
         
-        <TabsContent value="account">
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-center text-xl font-semibold">
-              Configurações da Conta em Construção
-            </h2>
-            <p className="mt-2 text-center text-muted-foreground">
-              Esta funcionalidade estará disponível em breve.
-            </p>
+        <TabsContent value="account" className="space-y-6">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Assinatura
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SubscriptionInfo />
+              </CardContent>
+            </Card>
+            
+            {!subscriptionData.is_active && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Planos Disponíveis</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SubscriptionPlans />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

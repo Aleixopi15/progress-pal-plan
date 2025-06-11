@@ -6,9 +6,11 @@ import { PageTitle } from "@/components/layout/PageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, BookOpen, Calendar, Clock } from "lucide-react";
+import { Loader2, BookOpen, Calendar, Clock, Eye } from "lucide-react";
+import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
 
 interface Session {
   id: string;
@@ -23,6 +25,9 @@ interface Session {
   end_page: number | null;
   correct_exercises: number | null;
   incorrect_exercises: number | null;
+  video_start_time: string | null;
+  video_end_time: string | null;
+  comment: string | null;
   subject_name: string;
   topic_name: string | null;
 }
@@ -39,6 +44,8 @@ export default function History() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [currentTab, setCurrentTab] = useState<string>("all");
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   // Buscar sessões de estudo e matérias
   useEffect(() => {
@@ -62,7 +69,8 @@ export default function History() {
           .select(`
             id, date, registration_time, subject_id, topic_id, 
             subtopic, study_time, lesson, start_page, end_page,
-            correct_exercises, incorrect_exercises
+            correct_exercises, incorrect_exercises, video_start_time,
+            video_end_time, comment
           `)
           .eq("user_id", user.id)
           .order("date", { ascending: false });
@@ -161,6 +169,11 @@ export default function History() {
     return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
   };
 
+  const handleViewDetails = (session: Session) => {
+    setSelectedSession(session);
+    setDetailDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -250,9 +263,9 @@ export default function History() {
       {filteredSessions.length > 0 ? (
         <div className="space-y-4">
           {filteredSessions.map((session) => (
-            <Card key={session.id} className="overflow-hidden">
+            <Card key={session.id} className="overflow-hidden hover:shadow-md transition-shadow">
               <CardContent className="p-6">
-                <div className="grid gap-2 md:grid-cols-3">
+                <div className="grid gap-2 md:grid-cols-4 items-start">
                   <div>
                     <h3 className="font-medium">{session.lesson || session.subtopic || "Sessão de estudo"}</h3>
                     <div className="flex items-center mt-1 text-sm text-muted-foreground">
@@ -288,8 +301,20 @@ export default function History() {
                     )}
                   </div>
                   
-                  <div className="text-right text-sm text-muted-foreground">
+                  <div className="text-sm text-muted-foreground">
                     {formatDate(session.date)}
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewDetails(session)}
+                      className="gap-1"
+                    >
+                      <Eye className="h-3 w-3" />
+                      Detalhes
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -307,6 +332,12 @@ export default function History() {
           </p>
         </div>
       )}
+
+      <SessionDetailDialog
+        session={selectedSession}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }

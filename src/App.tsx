@@ -21,7 +21,6 @@ import Auth from "./pages/Auth";
 import Subjects from "./pages/Subjects";
 import Topics from "./pages/Topics";
 import Notes from "./pages/Notes";
-import Activity from "./pages/Activity";
 import History from "./pages/History";
 import Simulados from "./pages/Simulados";
 
@@ -104,13 +103,6 @@ const App = () => (
                   <RequireAuth>
                     <DashboardLayout>
                       <Notes />
-                    </DashboardLayout>
-                  </RequireAuth>
-                } />
-                <Route path="/activity" element={
-                  <RequireAuth>
-                    <DashboardLayout>
-                      <Activity />
                     </DashboardLayout>
                   </RequireAuth>
                 } />

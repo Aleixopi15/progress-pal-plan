@@ -9,7 +9,6 @@ import {
   User,
   Settings,
   BookOpen,
-  Clock,
   LayoutDashboard,
   History,
   FileText
@@ -35,7 +34,6 @@ const navigationItems = [
   { href: "/resources", label: "Recursos", icon: Bookmark },
   { href: "/subjects", label: "Matérias", icon: BookOpen },
   { href: "/simulados", label: "Simulados", icon: FileText },
-  { href: "/activity", label: "Atividades", icon: Clock },
   { href: "/history", label: "Histórico", icon: History },
   { href: "/profile", label: "Perfil", icon: User },
   { href: "/settings", label: "Configurações", icon: Settings },
