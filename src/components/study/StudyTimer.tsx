@@ -1,183 +1,79 @@
 
-import React, { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Play, Pause, Square, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Clock, Play, Pause, TimerReset } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { formatDuration } from "@/lib/formatters";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { AddStudyTimeDialog } from "./AddStudyTimeDialog";
 
 export function StudyTimer() {
+  const [time, setTime] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [seconds, setSeconds] = useState(0);
-  const [showStudyDialog, setShowStudyDialog] = useState(false);
-  const intervalRef = useRef<number | null>(null);
-  const { toast } = useToast();
-  
-  // Start or pause timer
-  const toggleTimer = () => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
     if (isRunning) {
-      // Pause
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      setIsRunning(false);
-      
-      // Show toast when pausing
-      if (seconds > 60) { // Only show if timer has been running for at least a minute
-        toast({
-          title: "Cronômetro pausado",
-          description: `Tempo decorrido: ${formatDuration(seconds)}`,
-        });
-      }
-    } else {
-      // Start
-      setIsRunning(true);
-      intervalRef.current = window.setInterval(() => {
-        setSeconds(prevSeconds => prevSeconds + 1);
+      interval = setInterval(() => {
+        setTime(time => time + 1);
       }, 1000);
     }
+    return () => clearInterval(interval);
+  }, [isRunning]);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const handleStart = () => setIsRunning(true);
+  const handlePause = () => setIsRunning(false);
   
-  // Reset the timer and open study dialog
-  const resetTimer = () => {
-    if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    // Only show completion dialog if timer was actually used
-    if (seconds > 60) {
-      setIsRunning(false);
-      setShowStudyDialog(true);
-    } else {
-      setSeconds(0);
-      setIsRunning(false);
-    }
-  };
-  
-  // Handle post-reset actions when dialog is closed
-  const handleDialogClose = (saved: boolean) => {
-    setShowStudyDialog(false);
-    setSeconds(0);
-    
-    if (saved) {
-      toast({
-        title: "Tempo de estudo registrado",
-        description: `${formatDuration(seconds)} foram registrados com sucesso!`,
-      });
+  const handleStop = () => {
+    setIsRunning(false);
+    if (time > 0) {
+      setIsDialogOpen(true);
     }
   };
-  
-  // Calculate minutes for display
-  const displayMinutes = Math.floor(seconds / 60);
-  const displaySeconds = seconds % 60;
-  
-  // Calculate total minutes for study tracking
-  const totalMinutes = Math.ceil(seconds / 60);
-  
-  // Cleanup interval on component unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-  
+
+  const handleSave = () => {
+    setTime(0);
+    setIsDialogOpen(false);
+  };
+
+  const timeInMinutes = Math.floor(time / 60);
+
   return (
-    <>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1">
-            <Clock className="h-4 w-4" />
-            <span className="hidden sm:inline">Cronômetro</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Cronômetro de Estudo</SheetTitle>
-            <SheetDescription>
-              Registre seu tempo de estudo com este cronômetro e salve seus resultados.
-            </SheetDescription>
-          </SheetHeader>
-          
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="text-center">Tempo de Estudo</CardTitle>
-              <CardDescription className="text-center">Clique em iniciar para começar a cronometrar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <div className="text-5xl font-bold tabular-nums">
-                  {displayMinutes.toString().padStart(2, '0')}:{displaySeconds.toString().padStart(2, '0')}
-                </div>
-              </div>
-              <div className="text-center mt-2 text-muted-foreground">
-                Total: {totalMinutes} minutos
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-center gap-4">
-              <Button 
-                variant={isRunning ? "outline" : "default"}
-                onClick={toggleTimer}
-                className="gap-2"
-              >
-                {isRunning ? (
-                  <>
-                    <Pause className="h-4 w-4" />
-                    Pausar
-                  </>
-                ) : (
-                  <>
-                    <Play className="h-4 w-4" />
-                    Iniciar
-                  </>
-                )}
-              </Button>
-              
-              <Button 
-                variant="destructive" 
-                onClick={resetTimer}
-                disabled={seconds === 0}
-                className="gap-2"
-              >
-                <TimerReset className="h-4 w-4" />
-                Finalizar
-              </Button>
-            </CardFooter>
-          </Card>
-          
-          <div className="mt-8">
-            <h3 className="text-lg font-medium">Dicas para estudos eficientes:</h3>
-            <ul className="mt-2 space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <Clock className="h-4 w-4 mt-0.5 text-primary" />
-                <span>A técnica Pomodoro sugere estudar por 25 minutos e descansar por 5.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Clock className="h-4 w-4 mt-0.5 text-primary" />
-                <span>Faça pausas mais longas (15-30 min) a cada 2 horas de estudo.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Clock className="h-4 w-4 mt-0.5 text-primary" />
-                <span>Registre seu tempo de estudo para acompanhar seu progresso.</span>
-              </li>
-            </ul>
-          </div>
-        </SheetContent>
-      </Sheet>
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-card border rounded-lg px-3 py-2">
+        <Clock size={16} className="text-muted-foreground" />
+        <span className="font-mono text-sm font-medium">
+          {formatTime(time)}
+        </span>
+      </div>
       
-      <AddStudyTimeDialog
-        open={showStudyDialog}
-        onOpenChange={(open) => {
-          if (!open) handleDialogClose(false);
-        }}
-        initialStudyTime={totalMinutes.toString()}
-        onSave={() => handleDialogClose(true)}
+      <div className="flex gap-1">
+        {!isRunning ? (
+          <Button onClick={handleStart} size="sm" variant="outline">
+            <Play size={14} />
+          </Button>
+        ) : (
+          <Button onClick={handlePause} size="sm" variant="outline">
+            <Pause size={14} />
+          </Button>
+        )}
+        
+        <Button onClick={handleStop} size="sm" variant="outline">
+          <Square size={14} />
+        </Button>
+      </div>
+
+      <AddStudyTimeDialog 
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onStudyTimeAdded={handleSave}
+        defaultTime={timeInMinutes}
       />
-    </>
+    </div>
   );
 }
