@@ -59,8 +59,8 @@ export function SimuladosChart({ simulados }: SimuladosChartProps) {
       <Tabs defaultValue="evolucao" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="evolucao">Evolução da Nota Total</TabsTrigger>
-          <TabsTrigger value="areas">Notas por Área</TabsTrigger>
-          <TabsTrigger value="acertos">Percentual de Acertos</TabsTrigger>
+          <TabsTrigger value="acertos">Acertos por Área</TabsTrigger>
+          <TabsTrigger value="percentual">Percentual de Acertos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="evolucao">
@@ -102,12 +102,12 @@ export function SimuladosChart({ simulados }: SimuladosChartProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="areas">
+        <TabsContent value="acertos">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Notas por Área de Conhecimento
+                Acertos por Área de Conhecimento
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -118,23 +118,29 @@ export function SimuladosChart({ simulados }: SimuladosChartProps) {
                     dataKey="index" 
                     tickFormatter={(value) => `${value}º`}
                   />
-                  <YAxis domain={[0, 1000]} />
+                  <YAxis domain={[0, 45]} />
                   <Tooltip 
                     labelFormatter={(value) => `${value}º Simulado`}
+                    formatter={(value: any, name: string) => [
+                      `${value} acertos`,
+                      name === "linguagens" ? "Linguagens" :
+                      name === "humanas" ? "Humanas" :
+                      name === "natureza" ? "Natureza" :
+                      name === "matematica" ? "Matemática" : name
+                    ]}
                   />
                   <Legend />
                   <Bar dataKey="linguagens" fill="hsl(var(--primary))" name="Linguagens" />
                   <Bar dataKey="humanas" fill="hsl(var(--secondary))" name="Humanas" />
                   <Bar dataKey="natureza" fill="hsl(var(--accent))" name="Natureza" />
                   <Bar dataKey="matematica" fill="#8884d8" name="Matemática" />
-                  <Bar dataKey="redacao" fill="#82ca9d" name="Redação" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="acertos">
+        <TabsContent value="percentual">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -6,7 +6,8 @@ import { StudyChart } from "@/components/dashboard/StudyChart";
 import { StudyTasks } from "@/components/dashboard/StudyTasks";
 import { StudyStreak } from "@/components/dashboard/StudyStreak";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
-import { NextStudySessions } from "@/components/dashboard/NextStudySessions";
+import { RecentStudySessions } from "@/components/dashboard/RecentStudySessions";
+import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
 import { Button } from "@/components/ui/button";
 import { Clock, BookOpen, Target, Award, Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,26 @@ import { useAuth } from "@/lib/auth";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
+
+interface Session {
+  id: string;
+  date: string;
+  registration_time: string;
+  subject_id: string;
+  topic_id: string | null;
+  subtopic: string | null;
+  study_time: number;
+  lesson: string | null;
+  start_page: number | null;
+  end_page: number | null;
+  correct_exercises: number | null;
+  incorrect_exercises: number | null;
+  video_start_time: string | null;
+  video_end_time: string | null;
+  comment: string | null;
+  subject_name: string;
+  topic_name: string | null;
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -32,6 +53,8 @@ export default function Dashboard() {
     currentStreak: 0,
     days: []
   });
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
   useEffect(() => {
     if (user) {
@@ -206,32 +229,56 @@ export default function Dashboard() {
     );
   };
 
-  const nextSessions = [
-    {
-      id: "1",
-      title: "Química Orgânica",
-      subject: "Química",
-      date: "Amanhã",
-      time: "09:00 - 10:30",
-      duration: "1h 30min",
-    },
-    {
-      id: "2",
-      title: "Geometria",
-      subject: "Matemática",
-      date: "Amanhã",
-      time: "11:00 - 12:30",
-      duration: "1h 30min",
-    },
-    {
-      id: "3",
-      title: "Literatura Brasileira",
-      subject: "Português",
-      date: "Depois de amanhã",
-      time: "09:00 - 10:30",
-      duration: "1h 30min",
-    },
-  ];
+  const handleViewSessionDetails = async (sessionId: string) => {
+    try {
+      const { data: session, error } = await supabase
+        .from('study_sessions')
+        .select(`
+          id, date, registration_time, subject_id, topic_id, 
+          subtopic, study_time, lesson, start_page, end_page,
+          correct_exercises, incorrect_exercises, video_start_time,
+          video_end_time, comment
+        `)
+        .eq('id', sessionId)
+        .single();
+
+      if (error) throw error;
+
+      // Get subject name
+      const { data: subject } = await supabase
+        .from('subjects')
+        .select('name')
+        .eq('id', session.subject_id)
+        .single();
+
+      // Get topic name if exists
+      let topicName = null;
+      if (session.topic_id) {
+        const { data: topic } = await supabase
+          .from('topics')
+          .select('name')
+          .eq('id', session.topic_id)
+          .single();
+        topicName = topic?.name || null;
+      }
+
+      const enrichedSession = {
+        ...session,
+        subject_name: subject?.name || "Matéria não encontrada",
+        topic_name: topicName
+      };
+
+      setSelectedSession(enrichedSession);
+      setDetailDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching session details:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar detalhes",
+        description: "Não foi possível carregar os detalhes da sessão."
+      });
+    }
+  };
 
   const weeklyProgress = weeklyTarget > 0 ? Math.round((weeklyStudyMinutes / weeklyTarget) * 100) : 0;
 
@@ -320,9 +367,18 @@ export default function Dashboard() {
           <StudyTasks tasks={loading ? [] : tasksData} onComplete={handleCompleteTask} />
         </div>
         <div>
-          <NextStudySessions sessions={nextSessions} />
+          <RecentStudySessions 
+            sessions={loading ? [] : tasksData} 
+            onViewDetails={handleViewSessionDetails}
+          />
         </div>
       </div>
+
+      <SessionDetailDialog
+        session={selectedSession}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }

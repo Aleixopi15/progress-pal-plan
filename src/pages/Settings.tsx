@@ -10,7 +10,6 @@ import { Calendar, Target, Trophy, CreditCard } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useSubscription } from "@/lib/subscription";
 import { SubscriptionInfo } from "@/components/subscription/SubscriptionInfo";
 import { SubscriptionPlans } from "@/components/subscription/SubscriptionPlans";
@@ -152,7 +151,7 @@ export default function Settings() {
     );
   }
 
-  const SettingsContent = () => (
+  return (
     <div className="animate-fade-in">
       <PageTitle 
         title="Configurações" 
@@ -272,26 +271,6 @@ export default function Settings() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  );
-
-  // Se o usuário tem assinatura ativa, usar o DashboardLayout
-  if (subscriptionData.is_active) {
-    return (
-      <DashboardLayout>
-        <SettingsContent />
-      </DashboardLayout>
-    );
-  }
-
-  // Se não tem assinatura ativa, mostrar sem o layout do dashboard
-  return (
-    <div className="flex min-h-screen">
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1 px-4 py-6 md:px-6">
-          <SettingsContent />
-        </main>
-      </div>
     </div>
   );
 }
