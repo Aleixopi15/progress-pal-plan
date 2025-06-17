@@ -14,7 +14,7 @@ const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sáb
 interface Subject {
   id: string;
   name: string;
-  color: string;
+  description: string | null;
 }
 
 interface ScheduleEvent {
@@ -53,7 +53,7 @@ export function ScheduleEventDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subjects')
-        .select('*')
+        .select('id, name, description')
         .order('name');
 
       if (error) throw error;
@@ -92,12 +92,20 @@ export function ScheduleEventDialog({
     setIsLoading(true);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
       const eventData = {
         title,
         subject_id: subjectId,
         day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
+        user_id: user.id,
       };
 
       if (event) {

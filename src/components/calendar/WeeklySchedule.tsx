@@ -17,12 +17,24 @@ interface ScheduleEvent {
   end_time: string;
   subject?: {
     name: string;
-    color: string;
   };
 }
 
 const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// Generate a color based on subject name for consistency
+const getSubjectColor = (subjectName: string) => {
+  const colors = [
+    '#3b82f6', '#ef4444', '#10b981', '#f59e0b', 
+    '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'
+  ];
+  let hash = 0;
+  for (let i = 0; i < subjectName.length; i++) {
+    hash = subjectName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
 
 export function WeeklySchedule() {
   const [selectedWeek, setSelectedWeek] = useState(new Date());
@@ -38,7 +50,7 @@ export function WeeklySchedule() {
         .from('schedule_events')
         .select(`
           *,
-          subject:subjects(name, color)
+          subject:subjects(name)
         `)
         .order('day_of_week')
         .order('start_time');
@@ -141,7 +153,7 @@ export function WeeklySchedule() {
                             <div
                               key={event.id}
                               className="text-xs p-1 rounded text-white cursor-pointer"
-                              style={{ backgroundColor: event.subject?.color || '#3b82f6' }}
+                              style={{ backgroundColor: getSubjectColor(event.subject?.name || 'Default') }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEventClick(event);
