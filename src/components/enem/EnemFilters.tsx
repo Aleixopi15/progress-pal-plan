@@ -20,25 +20,26 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedLimit, setSelectedLimit] = useState<string>("10");
 
-  // Fetch available years
-  const { data: yearsData } = useQuery({
-    queryKey: ['enem-years'],
+  // Fetch available exams to get years and disciplines
+  const { data: examsData } = useQuery({
+    queryKey: ['enem-exams'],
     queryFn: async () => {
       const response = await fetch('https://api.enem.dev/v1/exams');
-      if (!response.ok) throw new Error('Erro ao carregar anos');
+      if (!response.ok) throw new Error('Erro ao carregar dados dos exames');
       return response.json();
     },
   });
 
-  // Fetch disciplines
-  const { data: disciplinesData } = useQuery({
-    queryKey: ['enem-disciplines'],
-    queryFn: async () => {
-      const response = await fetch('https://api.enem.dev/v1/disciplines');
-      if (!response.ok) throw new Error('Erro ao carregar disciplinas');
-      return response.json();
-    },
-  });
+  // Extract years from exams data
+  const availableYears = examsData ? examsData.map((exam: any) => exam.year).sort((a: number, b: number) => b - a) : [];
+  
+  // Extract disciplines from exams data (get from the most recent exam)
+  const availableDisciplines = examsData && examsData.length > 0 
+    ? examsData[0].disciplines.map((discipline: any) => ({
+        label: discipline.label,
+        value: discipline.value
+      }))
+    : [];
 
   // Fetch subjects based on selected discipline
   const { data: subjectsData } = useQuery({
@@ -90,7 +91,7 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os anos</SelectItem>
-              {yearsData?.map((year: number) => (
+              {availableYears.map((year: number) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
                 </SelectItem>
@@ -107,9 +108,9 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as disciplinas</SelectItem>
-              {disciplinesData?.map((discipline: string) => (
-                <SelectItem key={discipline} value={discipline}>
-                  {discipline}
+              {availableDisciplines.map((discipline: any) => (
+                <SelectItem key={discipline.value} value={discipline.value}>
+                  {discipline.label}
                 </SelectItem>
               ))}
             </SelectContent>
