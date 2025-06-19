@@ -241,6 +241,12 @@ export default function Index() {
     fetchDashboardData();
   };
 
+  const handleViewSessionDetails = (sessionId: string) => {
+    // Implementar visualização de detalhes da sessão
+    console.log("Visualizar detalhes da sessão:", sessionId);
+    // Aqui você pode abrir um modal ou navegar para uma página de detalhes
+  };
+
   if (loading) {
     return (
       <div className="p-4 md:p-6">
@@ -324,7 +330,7 @@ export default function Index() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <QuestionsStats />
-        <NextStudySessions sessions={sessions} />
+        <NextStudySessions sessions={sessions} onViewDetails={handleViewSessionDetails} />
         <SubjectProgress />
       </div>
 

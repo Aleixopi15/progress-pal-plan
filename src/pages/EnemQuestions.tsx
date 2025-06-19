@@ -55,7 +55,15 @@ export default function EnemQuestions() {
         throw new Error('Erro ao carregar questões');
       }
       
-      return response.json();
+      const data = await response.json();
+      console.log('API Response:', data); // Debug log
+      
+      // A API retorna um array direto de questões, não um objeto com propriedade questions
+      return {
+        questions: Array.isArray(data) ? data : [],
+        total: Array.isArray(data) ? data.length : 0,
+        totalPages: Math.ceil((Array.isArray(data) ? data.length : 0) / (filters.limit || 10))
+      };
     },
   });
 

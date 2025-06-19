@@ -1,9 +1,9 @@
 
 import React, { useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddStudyTimeDialog } from "./AddStudyTimeDialog";
-import { StudyTimer } from "./StudyTimer";
+import { FloatingTimer } from "./FloatingTimer";
 
 interface StudyTimeButtonProps {
   onStudyTimeAdded?: () => void;
@@ -11,6 +11,7 @@ interface StudyTimeButtonProps {
 
 export function StudyTimeButton({ onStudyTimeAdded }: StudyTimeButtonProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTimerOpen, setIsTimerOpen] = useState(false);
 
   const handleStudyTimeAdded = () => {
     if (onStudyTimeAdded) {
@@ -19,24 +20,40 @@ export function StudyTimeButton({ onStudyTimeAdded }: StudyTimeButtonProps) {
   };
 
   return (
-    <div className="flex gap-2">
-      <StudyTimer />
+    <>
+      <div className="flex gap-2">
+        <Button 
+          onClick={() => setIsTimerOpen(true)}
+          size="sm"
+          className="gap-2"
+          variant="outline"
+        >
+          <Timer size={18} />
+          <span className="hidden sm:inline">Cronômetro</span>
+        </Button>
+        
+        <Button 
+          onClick={() => setIsDialogOpen(true)}
+          size="sm"
+          className="gap-2"
+        >
+          <Clock size={18} />
+          <span className="hidden sm:inline">Registrar Tempo</span>
+          <span className="sm:hidden">Registrar</span>
+        </Button>
+      </div>
       
-      <Button 
-        onClick={() => setIsDialogOpen(true)}
-        size="sm"
-        className="gap-2"
-      >
-        <Clock size={18} />
-        <span className="hidden sm:inline">Registrar Tempo</span>
-        <span className="sm:hidden">Registrar</span>
-      </Button>
+      <FloatingTimer 
+        isOpen={isTimerOpen}
+        onClose={() => setIsTimerOpen(false)}
+        onStudyTimeAdded={handleStudyTimeAdded}
+      />
       
       <AddStudyTimeDialog 
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onStudyTimeAdded={handleStudyTimeAdded}
       />
-    </div>
+    </>
   );
 }
