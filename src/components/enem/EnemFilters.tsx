@@ -15,9 +15,9 @@ interface EnemFiltersProps {
 }
 
 export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedLimit, setSelectedLimit] = useState<string>("10");
 
   // Fetch available years
@@ -44,12 +44,12 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
   const { data: subjectsData } = useQuery({
     queryKey: ['enem-subjects', selectedDiscipline],
     queryFn: async () => {
-      if (!selectedDiscipline) return [];
+      if (selectedDiscipline === "all") return [];
       const response = await fetch(`https://api.enem.dev/v1/subjects?discipline=${selectedDiscipline}`);
       if (!response.ok) throw new Error('Erro ao carregar assuntos');
       return response.json();
     },
-    enabled: !!selectedDiscipline,
+    enabled: selectedDiscipline !== "all",
   });
 
   const handleApplyFilters = () => {
@@ -57,25 +57,25 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
       limit: parseInt(selectedLimit)
     };
 
-    if (selectedYear) filters.year = parseInt(selectedYear);
-    if (selectedDiscipline) filters.discipline = selectedDiscipline;
-    if (selectedSubject) filters.subject = selectedSubject;
+    if (selectedYear !== "all") filters.year = parseInt(selectedYear);
+    if (selectedDiscipline !== "all") filters.discipline = selectedDiscipline;
+    if (selectedSubject !== "all") filters.subject = selectedSubject;
 
     onFilterChange(filters);
   };
 
   const handleClearFilters = () => {
-    setSelectedYear("");
-    setSelectedDiscipline("");
-    setSelectedSubject("");
+    setSelectedYear("all");
+    setSelectedDiscipline("all");
+    setSelectedSubject("all");
     setSelectedLimit("10");
     onFilterChange({ limit: 10 });
   };
 
   // Clear subject when discipline changes
   useEffect(() => {
-    if (selectedDiscipline) {
-      setSelectedSubject("");
+    if (selectedDiscipline !== "all") {
+      setSelectedSubject("all");
     }
   }, [selectedDiscipline]);
 
@@ -89,7 +89,7 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
               <SelectValue placeholder="Selecione o ano" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os anos</SelectItem>
+              <SelectItem value="all">Todos os anos</SelectItem>
               {yearsData?.map((year: number) => (
                 <SelectItem key={year} value={year.toString()}>
                   {year}
@@ -106,7 +106,7 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
               <SelectValue placeholder="Selecione a disciplina" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as disciplinas</SelectItem>
+              <SelectItem value="all">Todas as disciplinas</SelectItem>
               {disciplinesData?.map((discipline: string) => (
                 <SelectItem key={discipline} value={discipline}>
                   {discipline}
@@ -118,12 +118,12 @@ export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Assunto</label>
-          <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedDiscipline}>
+          <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={selectedDiscipline === "all"}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o assunto" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os assuntos</SelectItem>
+              <SelectItem value="all">Todos os assuntos</SelectItem>
               {subjectsData?.map((subject: string) => (
                 <SelectItem key={subject} value={subject}>
                   {subject}
