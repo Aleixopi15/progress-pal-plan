@@ -23,6 +23,7 @@ import Topics from "./pages/Topics";
 import Notes from "./pages/Notes";
 import History from "./pages/History";
 import Simulados from "./pages/Simulados";
+import EnemQuestions from "./pages/EnemQuestions";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,13 @@ const App = () => (
                   <RequireAuth>
                     <DashboardLayout>
                       <Simulados />
+                    </DashboardLayout>
+                  </RequireAuth>
+                } />
+                <Route path="/enem-questions" element={
+                  <RequireAuth>
+                    <DashboardLayout>
+                      <EnemQuestions />
                     </DashboardLayout>
                   </RequireAuth>
                 } />

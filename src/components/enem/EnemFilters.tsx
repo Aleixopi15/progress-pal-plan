@@ -1,0 +1,162 @@
+
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+
+interface EnemFiltersProps {
+  onFilterChange: (filters: {
+    year?: number;
+    discipline?: string;
+    subject?: string;
+    limit?: number;
+  }) => void;
+}
+
+export function EnemFilters({ onFilterChange }: EnemFiltersProps) {
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("");
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedLimit, setSelectedLimit] = useState<string>("10");
+
+  // Fetch available years
+  const { data: yearsData } = useQuery({
+    queryKey: ['enem-years'],
+    queryFn: async () => {
+      const response = await fetch('https://api.enem.dev/v1/exams');
+      if (!response.ok) throw new Error('Erro ao carregar anos');
+      return response.json();
+    },
+  });
+
+  // Fetch disciplines
+  const { data: disciplinesData } = useQuery({
+    queryKey: ['enem-disciplines'],
+    queryFn: async () => {
+      const response = await fetch('https://api.enem.dev/v1/disciplines');
+      if (!response.ok) throw new Error('Erro ao carregar disciplinas');
+      return response.json();
+    },
+  });
+
+  // Fetch subjects based on selected discipline
+  const { data: subjectsData } = useQuery({
+    queryKey: ['enem-subjects', selectedDiscipline],
+    queryFn: async () => {
+      if (!selectedDiscipline) return [];
+      const response = await fetch(`https://api.enem.dev/v1/subjects?discipline=${selectedDiscipline}`);
+      if (!response.ok) throw new Error('Erro ao carregar assuntos');
+      return response.json();
+    },
+    enabled: !!selectedDiscipline,
+  });
+
+  const handleApplyFilters = () => {
+    const filters: any = {
+      limit: parseInt(selectedLimit)
+    };
+
+    if (selectedYear) filters.year = parseInt(selectedYear);
+    if (selectedDiscipline) filters.discipline = selectedDiscipline;
+    if (selectedSubject) filters.subject = selectedSubject;
+
+    onFilterChange(filters);
+  };
+
+  const handleClearFilters = () => {
+    setSelectedYear("");
+    setSelectedDiscipline("");
+    setSelectedSubject("");
+    setSelectedLimit("10");
+    onFilterChange({ limit: 10 });
+  };
+
+  // Clear subject when discipline changes
+  useEffect(() => {
+    if (selectedDiscipline) {
+      setSelectedSubject("");
+    }
+  }, [selectedDiscipline]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Ano</label>
+          <Select value={selectedYear} onValueChange={setSelectedYear}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o ano" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os anos</SelectItem>
+              {yearsData?.map((year: number) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Disciplina</label>
+          <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a disciplina" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas as disciplinas</SelectItem>
+              {disciplinesData?.map((discipline: string) => (
+                <SelectItem key={discipline} value={discipline}>
+                  {discipline}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Assunto</label>
+          <Select value={selectedSubject} onValueChange={setSelectedSubject} disabled={!selectedDiscipline}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o assunto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos os assuntos</SelectItem>
+              {subjectsData?.map((subject: string) => (
+                <SelectItem key={subject} value={subject}>
+                  {subject}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Questões por página</label>
+          <Select value={selectedLimit} onValueChange={setSelectedLimit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={handleApplyFilters} className="flex-1 md:flex-none">
+          Aplicar Filtros
+        </Button>
+        <Button variant="outline" onClick={handleClearFilters} className="flex-1 md:flex-none">
+          Limpar Filtros
+        </Button>
+      </div>
+    </div>
+  );
+}

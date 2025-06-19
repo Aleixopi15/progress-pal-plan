@@ -11,7 +11,8 @@ import {
   BookOpen,
   LayoutDashboard,
   History,
-  FileText
+  FileText,
+  HelpCircle
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const navigationItems = [
   { href: "/resources", label: "Recursos", icon: Bookmark },
   { href: "/subjects", label: "Matérias", icon: BookOpen },
   { href: "/simulados", label: "Simulados", icon: FileText },
+  { href: "/enem-questions", label: "Questões Enem", icon: HelpCircle },
   { href: "/history", label: "Histórico", icon: History },
   { href: "/profile", label: "Perfil", icon: User },
   { href: "/settings", label: "Configurações", icon: Settings },
