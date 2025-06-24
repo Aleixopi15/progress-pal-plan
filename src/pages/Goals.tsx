@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { Button } from "@/components/ui/button";
@@ -57,6 +56,8 @@ export default function Goals() {
 
       const formattedGoals = data?.map(goal => ({
         ...goal,
+        type: goal.type as "subject" | "time" | "task",
+        priority: goal.priority as "high" | "medium" | "low",
         subject_name: goal.subjects?.name
       })) || [];
 
