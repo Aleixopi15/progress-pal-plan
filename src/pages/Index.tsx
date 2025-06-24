@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,23 +7,45 @@ import { StudyTasks } from "@/components/dashboard/StudyTasks";
 import { NextStudySessions } from "@/components/dashboard/NextStudySessions";
 import { StudyChart } from "@/components/dashboard/StudyChart";
 import { QuestionsStats } from "@/components/dashboard/QuestionsStats";
-import { StudyStreak } from "@/components/dashboard/StudyStreak";
+import { StudyStreakCard } from "@/components/dashboard/StudyStreakCard";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
+import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
+import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Target } from "lucide-react";
 
+interface Session {
+  id: string;
+  date: string;
+  registration_time: string;
+  subject_id: string;
+  topic_id: string | null;
+  subtopic: string | null;
+  study_time: number;
+  lesson: string | null;
+  start_page: number | null;
+  end_page: number | null;
+  correct_exercises: number | null;
+  incorrect_exercises: number | null;
+  video_start_time: string | null;
+  video_end_time: string | null;
+  comment: string | null;
+  subject_name: string;
+  topic_name: string | null;
+}
+
 export default function Index() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [studyData, setStudyData] = useState({
     totalMinutes: 0,
     totalQuestions: 0,
     correctPercentage: 0,
-    chartData: [],
-    streakData: { currentStreak: 0, days: [] }
+    chartData: []
   });
   const [userSettings, setUserSettings] = useState({
     daysUntilExam: null,
@@ -32,6 +55,8 @@ export default function Index() {
   });
   const [tasks, setTasks] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -71,7 +96,8 @@ export default function Index() {
         .select(`
           id, subject_id, topic_id, date, registration_time,
           subtopic, study_time, lesson, correct_exercises,
-          incorrect_exercises, start_page, end_page
+          incorrect_exercises, start_page, end_page, comment,
+          video_start_time, video_end_time
         `)
         .eq("user_id", user?.id)
         .order("date", { ascending: false });
@@ -137,65 +163,43 @@ export default function Index() {
         };
       });
       
-      // Generate streak data based on actual study sessions
-      const streakDays = getDayInitials.map((day, i) => {
-        const dayIndex = (today.getDay() - 6 + i + 7) % 7;
-        const date = new Date();
-        date.setDate(today.getDate() - (today.getDay() - dayIndex + 7) % 7);
-        const dateFormatted = date.toISOString().split('T')[0];
-        
-        const hasStudied = studySessions?.some(session => 
-          session.date === dateFormatted
-        ) || false;
-        
-        return {
-          date: day,
-          hasStudied
-        };
-      });
+      // Format recent study sessions with subject names
+      const recentSessions = studySessions?.slice(0, 5) || [];
       
-      // Calculate current streak
-      let currentStreak = 0;
-      for (let i = streakDays.length - 1; i >= 0; i--) {
-        if (streakDays[i].hasStudied) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-      
-      // Format upcoming study sessions from recent records
-      const upcomingSessions = studySessions?.slice(0, 3).map(session => ({
-        id: session.id,
-        title: session.lesson || session.subtopic || "Sessão de estudo",
-        subject: "Carregando...",
-        date: "Próxima sessão",
-        time: session.registration_time,
-        duration: `${session.study_time} min`
-      })) || [];
-      
-      // Resolve subject names
-      if (upcomingSessions.length > 0) {
-        const subjectIds = studySessions?.slice(0, 3).map(s => s.subject_id).filter(Boolean) || [];
+      // Get subject names for the sessions
+      if (recentSessions.length > 0) {
+        const subjectIds = [...new Set(recentSessions.map(s => s.subject_id).filter(Boolean))];
         
-        if (subjectIds.length > 0) {
-          const { data: subjectsData } = await supabase
-            .from("subjects")
+        const { data: subjectsData } = await supabase
+          .from("subjects")
+          .select("id, name")
+          .in("id", subjectIds);
+          
+        const subjectsMap = new Map(subjectsData?.map(s => [s.id, s.name]) || []);
+        
+        // Get topic names for sessions that have topic_id
+        const topicIds = [...new Set(recentSessions.map(s => s.topic_id).filter(Boolean))];
+        let topicsMap = new Map();
+        
+        if (topicIds.length > 0) {
+          const { data: topicsData } = await supabase
+            .from("topics")
             .select("id, name")
-            .in("id", subjectIds);
-            
-          if (subjectsData) {
-            upcomingSessions.forEach((session, index) => {
-              if (index < studySessions?.length) {
-                const sessionSubjectId = studySessions[index].subject_id;
-                const matchingSubject = subjectsData.find(s => s.id === sessionSubjectId);
-                if (matchingSubject) {
-                  session.subject = matchingSubject.name;
-                }
-              }
-            });
-          }
+            .in("id", topicIds);
+          
+          topicsMap = new Map(topicsData?.map(t => [t.id, t.name]) || []);
         }
+        
+        const formattedSessions = recentSessions.map(session => ({
+          id: session.id,
+          title: session.lesson || session.subtopic || "Sessão de estudo",
+          subject: subjectsMap.get(session.subject_id) || "Matéria",
+          date: new Date(session.date).toLocaleDateString("pt-BR"),
+          time: session.registration_time,
+          duration: `${session.study_time} min`
+        }));
+        
+        setSessions(formattedSessions);
       }
       
       // Set all data
@@ -203,16 +207,12 @@ export default function Index() {
         totalMinutes,
         totalQuestions,
         correctPercentage,
-        chartData,
-        streakData: {
-          currentStreak,
-          days: streakDays
-        }
+        chartData
       });
       
       // Use the most recent study sessions as tasks
       setTasks(
-        studySessions?.slice(0, 3).map(session => ({
+        recentSessions?.slice(0, 3).map(session => ({
           id: session.id,
           title: session.lesson || session.subtopic || "Sessão de estudo",
           subject: "Matéria",
@@ -222,7 +222,6 @@ export default function Index() {
         })) || []
       );
       
-      setSessions(upcomingSessions);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -241,10 +240,55 @@ export default function Index() {
     fetchDashboardData();
   };
 
-  const handleViewSessionDetails = (sessionId: string) => {
-    // Implementar visualização de detalhes da sessão
-    console.log("Visualizar detalhes da sessão:", sessionId);
-    // Aqui você pode abrir um modal ou navegar para uma página de detalhes
+  const handleViewSessionDetails = async (sessionId: string) => {
+    try {
+      const { data: session, error } = await supabase
+        .from('study_sessions')
+        .select(`
+          id, date, registration_time, subject_id, topic_id, 
+          subtopic, study_time, lesson, start_page, end_page,
+          correct_exercises, incorrect_exercises, video_start_time,
+          video_end_time, comment
+        `)
+        .eq('id', sessionId)
+        .single();
+
+      if (error) throw error;
+
+      // Get subject name
+      const { data: subject } = await supabase
+        .from('subjects')
+        .select('name')
+        .eq('id', session.subject_id)
+        .single();
+
+      // Get topic name if exists
+      let topicName = null;
+      if (session.topic_id) {
+        const { data: topic } = await supabase
+          .from('topics')
+          .select('name')
+          .eq('id', session.topic_id)
+          .single();
+        topicName = topic?.name || null;
+      }
+
+      const enrichedSession = {
+        ...session,
+        subject_name: subject?.name || "Matéria não encontrada",
+        topic_name: topicName
+      };
+
+      setSelectedSession(enrichedSession);
+      setDetailDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching session details:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar detalhes",
+        description: "Não foi possível carregar os detalhes da sessão."
+      });
+    }
   };
 
   if (loading) {
@@ -324,7 +368,7 @@ export default function Index() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StudyStreak {...studyData.streakData} />
+        <StudyStreakCard />
         <StudyChart data={studyData.chartData} />
       </div>
 
@@ -335,6 +379,12 @@ export default function Index() {
       </div>
 
       <StudyTasks tasks={tasks} />
+
+      <SessionDetailDialog
+        session={selectedSession}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }

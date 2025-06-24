@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyChart } from "@/components/dashboard/StudyChart";
 import { StudyTasks } from "@/components/dashboard/StudyTasks";
-import { StudyStreak } from "@/components/dashboard/StudyStreak";
+import { StudyStreakCard } from "@/components/dashboard/StudyStreakCard";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
 import { RecentStudySessions } from "@/components/dashboard/RecentStudySessions";
 import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
@@ -49,10 +48,6 @@ export default function Dashboard() {
   const [examInfo, setExamInfo] = useState<string>("");
   const [tasksData, setTasksData] = useState([]);
   const [chartData, setChartData] = useState([]);
-  const [streakData, setStreakData] = useState({
-    currentStreak: 0,
-    days: []
-  });
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
@@ -171,11 +166,6 @@ export default function Dashboard() {
           break;
         }
       }
-      
-      setStreakData({
-        currentStreak,
-        days: streakDays
-      });
       
       // Fetch recent tasks
       const { data: recentSessions, error: tasksError } = await supabase
@@ -332,8 +322,8 @@ export default function Dashboard() {
           description="2 matérias em dia"
         />
         <StatCard
-          title="Streak Atual"
-          value={`${streakData.currentStreak} dias`}
+          title="Sequência"
+          value="7 dias"
           icon={<Award className="h-5 w-5" />}
           description="Melhor: 14 dias"
         />
@@ -349,27 +339,17 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Progresso Geral</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StudyStreak {...streakData} />
-            <div className="mt-6">
-              <SubjectProgress />
-            </div>
-          </CardContent>
-        </Card>
+        <StudyStreakCard />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <StudyTasks tasks={loading ? [] : tasksData} onComplete={handleCompleteTask} />
+          <StudyTasks tasks={loading ? [] : tasksData} onComplete={() => {}} />
         </div>
         <div>
           <RecentStudySessions 
             sessions={loading ? [] : tasksData} 
-            onViewDetails={handleViewSessionDetails}
+            onViewDetails={() => {}}
           />
         </div>
       </div>
