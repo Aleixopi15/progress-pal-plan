@@ -44,13 +44,13 @@ export function GoalCard({ goal, onUpdateProgress, onDelete }: GoalCardProps) {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high":
-        return "text-red-600 bg-red-50 border-red-200";
+        return "text-red-700 bg-red-100 border-red-300 dark:text-red-300 dark:bg-red-900/30 dark:border-red-700";
       case "medium":
-        return "text-blue-600 bg-blue-50 border-blue-200";
+        return "text-blue-700 bg-blue-100 border-blue-300 dark:text-blue-300 dark:bg-blue-900/30 dark:border-blue-700";
       case "low":
-        return "text-green-600 bg-green-50 border-green-200";
+        return "text-green-700 bg-green-100 border-green-300 dark:text-green-300 dark:bg-green-900/30 dark:border-green-700";
       default:
-        return "text-blue-600 bg-blue-50 border-blue-200";
+        return "text-blue-700 bg-blue-100 border-blue-300 dark:text-blue-300 dark:bg-blue-900/30 dark:border-blue-700";
     }
   };
 
@@ -86,8 +86,8 @@ export function GoalCard({ goal, onUpdateProgress, onDelete }: GoalCardProps) {
   return (
     <Card className={cn(
       "relative transition-all hover:shadow-md",
-      goal.is_completed && "bg-green-50 border-green-200",
-      isOverdue && "bg-red-50 border-red-200"
+      goal.is_completed && "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700",
+      isOverdue && "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700"
     )}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -132,7 +132,7 @@ export function GoalCard({ goal, onUpdateProgress, onDelete }: GoalCardProps) {
           {goal.deadline && (
             <Badge variant="outline" className={cn(
               "text-xs flex items-center gap-1",
-              isOverdue && "text-red-600 bg-red-50"
+              isOverdue && "text-red-700 bg-red-100 dark:text-red-300 dark:bg-red-900/30"
             )}>
               <Calendar className="h-3 w-3" />
               {new Date(goal.deadline).toLocaleDateString("pt-BR")}
@@ -164,7 +164,7 @@ export function GoalCard({ goal, onUpdateProgress, onDelete }: GoalCardProps) {
 
         {goal.is_completed && (
           <div className="text-center">
-            <Badge className="bg-green-100 text-green-800">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
               ✅ Meta concluída!
             </Badge>
           </div>
@@ -172,7 +172,7 @@ export function GoalCard({ goal, onUpdateProgress, onDelete }: GoalCardProps) {
 
         {isOverdue && (
           <div className="text-center">
-            <Badge variant="destructive">
+            <Badge variant="destructive" className="dark:bg-red-900/50 dark:text-red-300">
               ⚠️ Prazo vencido
             </Badge>
           </div>

@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { CreateGoalDialog } from "@/components/goals/CreateGoalDialog";
+import { GoalNotifications } from "@/components/goals/GoalNotifications";
 
 interface Goal {
   id: string;
@@ -195,6 +196,9 @@ export default function Goals() {
           Nova Meta
         </Button>
       </PageTitle>
+
+      {/* Notificações de metas */}
+      <GoalNotifications />
 
       {/* Cards de resumo */}
       <div className="grid gap-4 md:grid-cols-3">

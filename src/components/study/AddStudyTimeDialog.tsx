@@ -1,11 +1,17 @@
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
@@ -20,102 +26,78 @@ interface Topic {
   name: string;
 }
 
-export interface AddStudyTimeDialogProps {
+interface AddStudyTimeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStudyTimeAdded: () => void;
-  defaultTime?: number;
+  onStudyTimeAdded?: () => void;
 }
 
-export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defaultTime = 0 }: AddStudyTimeDialogProps) {
+export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded }: AddStudyTimeDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
-  const [formData, setFormData] = useState({
-    subject_id: "",
-    topic_id: "",
-    study_time: defaultTime,
-    lesson: "",
-    subtopic: "",
-    start_page: "",
-    end_page: "",
-    correct_exercises: "",
-    incorrect_exercises: "",
-    video_start_time: "",
-    video_end_time: "",
-    comment: ""
-  });
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("");
+  const [date, setDate] = useState<Date>(new Date());
+  const [studyTime, setStudyTime] = useState("");
+  const [correctExercises, setCorrectExercises] = useState("");
+  const [incorrectExercises, setIncorrectExercises] = useState("");
+  const [lesson, setLesson] = useState("");
+  const [subtopic, setSubtopic] = useState("");
+  const [comment, setComment] = useState("");
 
   useEffect(() => {
-    if (open) {
+    if (open && user) {
       fetchSubjects();
-      setFormData(prev => ({ ...prev, study_time: defaultTime }));
     }
-  }, [open, defaultTime]);
+  }, [open, user]);
 
   useEffect(() => {
-    if (formData.subject_id) {
-      fetchTopics(formData.subject_id);
-    } else {
-      setTopics([]);
-      setFormData(prev => ({ ...prev, topic_id: "" }));
+    if (selectedSubject) {
+      fetchTopics(selectedSubject);
+      setSelectedTopic("");
     }
-  }, [formData.subject_id]);
+  }, [selectedSubject]);
 
   const fetchSubjects = async () => {
-    if (!user) return;
-    
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('subjects')
         .select('id, name')
-        .eq('user_id', user.id)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+        .eq('user_id', user?.id)
+        .order('name');
+      
       setSubjects(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar matérias",
-        description: error.message
-      });
+    } catch (error) {
+      console.error("Error fetching subjects:", error);
     }
   };
 
   const fetchTopics = async (subjectId: string) => {
-    if (!user) return;
-    
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('topics')
         .select('id, name')
-        .eq('user_id', user.id)
         .eq('subject_id', subjectId)
-        .order('name', { ascending: true });
-
-      if (error) throw error;
+        .eq('user_id', user?.id)
+        .order('name');
+      
       setTopics(data || []);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar tópicos",
-        description: error.message
-      });
+    } catch (error) {
+      console.error("Error fetching topics:", error);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    if (!formData.subject_id || !formData.study_time) {
+    
+    if (!selectedSubject || !studyTime) {
       toast({
         variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Selecione uma matéria e informe o tempo de estudo."
+        title: "Erro",
+        description: "Preencha pelo menos a matéria e o tempo de estudo"
       });
       return;
     }
@@ -123,58 +105,47 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defau
     try {
       setLoading(true);
       
-      const sessionData = {
-        user_id: user.id,
-        subject_id: formData.subject_id,
-        topic_id: formData.topic_id || null,
-        study_time: formData.study_time,
-        lesson: formData.lesson || null,
-        subtopic: formData.subtopic || null,
-        start_page: formData.start_page ? parseInt(formData.start_page) : null,
-        end_page: formData.end_page ? parseInt(formData.end_page) : null,
-        correct_exercises: formData.correct_exercises ? parseInt(formData.correct_exercises) : null,
-        incorrect_exercises: formData.incorrect_exercises ? parseInt(formData.incorrect_exercises) : null,
-        video_start_time: formData.video_start_time || null,
-        video_end_time: formData.video_end_time || null,
-        comment: formData.comment || null,
-        date: new Date().toISOString().split('T')[0],
-        registration_time: new Date().toTimeString().split(' ')[0].substring(0, 5)
-      };
-
       const { error } = await supabase
         .from('study_sessions')
-        .insert([sessionData]);
+        .insert({
+          user_id: user?.id,
+          subject_id: selectedSubject,
+          topic_id: selectedTopic || null,
+          date: date.toISOString().split('T')[0],
+          study_time: parseInt(studyTime),
+          correct_exercises: correctExercises ? parseInt(correctExercises) : null,
+          incorrect_exercises: incorrectExercises ? parseInt(incorrectExercises) : null,
+          lesson: lesson || null,
+          subtopic: subtopic || null,
+          comment: comment || null
+        });
 
       if (error) throw error;
 
       toast({
-        title: "Tempo de estudo registrado!",
-        description: "Sua sessão de estudo foi salva com sucesso."
+        title: "Sucesso!",
+        description: "Tempo de estudo registrado com sucesso."
       });
 
-      // Reset form
-      setFormData({
-        subject_id: "",
-        topic_id: "",
-        study_time: 0,
-        lesson: "",
-        subtopic: "",
-        start_page: "",
-        end_page: "",
-        correct_exercises: "",
-        incorrect_exercises: "",
-        video_start_time: "",
-        video_end_time: "",
-        comment: ""
-      });
-
-      onStudyTimeAdded();
+      onStudyTimeAdded?.();
       onOpenChange(false);
-    } catch (error: any) {
+      
+      // Reset form
+      setSelectedSubject("");
+      setSelectedTopic("");
+      setDate(new Date());
+      setStudyTime("");
+      setCorrectExercises("");
+      setIncorrectExercises("");
+      setLesson("");
+      setSubtopic("");
+      setComment("");
+    } catch (error) {
+      console.error("Error adding study time:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao registrar tempo de estudo",
-        description: error.message
+        title: "Erro",
+        description: "Erro ao registrar tempo de estudo"
       });
     } finally {
       setLoading(false);
@@ -183,41 +154,61 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defau
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Tempo de Estudo</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Data *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(date) => date && setDate(date)}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Matéria *</Label>
+            <Select onValueChange={setSelectedSubject} value={selectedSubject}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma matéria" />
+              </SelectTrigger>
+              <SelectContent>
+                {subjects.map((subject) => (
+                  <SelectItem key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {topics.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="subject">Matéria *</Label>
-              <Select 
-                value={formData.subject_id} 
-                onValueChange={(value) => setFormData({ ...formData, subject_id: value })}
-              >
+              <Label>Tópico</Label>
+              <Select onValueChange={setSelectedTopic} value={selectedTopic}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a matéria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="topic">Tópico</Label>
-              <Select 
-                value={formData.topic_id} 
-                onValueChange={(value) => setFormData({ ...formData, topic_id: value })}
-                disabled={!formData.subject_id}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tópico" />
+                  <SelectValue placeholder="Selecione um tópico (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {topics.map((topic) => (
@@ -228,134 +219,91 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defau
                 </SelectContent>
               </Select>
             </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="studyTime">Tempo de Estudo (minutos) *</Label>
+            <Input
+              id="studyTime"
+              type="number"
+              min="1"
+              value={studyTime}
+              onChange={(e) => setStudyTime(e.target.value)}
+              placeholder="60"
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="study_time">Tempo de Estudo (minutos) *</Label>
+              <Label htmlFor="correct">Exercícios Corretos</Label>
               <Input
-                id="study_time"
+                id="correct"
                 type="number"
-                min="1"
-                value={formData.study_time}
-                onChange={(e) => setFormData({ ...formData, study_time: parseInt(e.target.value) || 0 })}
-                placeholder="Ex: 60"
-                required
+                min="0"
+                value={correctExercises}
+                onChange={(e) => setCorrectExercises(e.target.value)}
+                placeholder="0"
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="lesson">Aula/Conteúdo</Label>
+              <Label htmlFor="incorrect">Exercícios Incorretos</Label>
               <Input
-                id="lesson"
-                value={formData.lesson}
-                onChange={(e) => setFormData({ ...formData, lesson: e.target.value })}
-                placeholder="Ex: Funções Quadráticas"
+                id="incorrect"
+                type="number"
+                min="0"
+                value={incorrectExercises}
+                onChange={(e) => setIncorrectExercises(e.target.value)}
+                placeholder="0"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lesson">Aula/Capítulo</Label>
+            <Input
+              id="lesson"
+              value={lesson}
+              onChange={(e) => setLesson(e.target.value)}
+              placeholder="Ex: Capítulo 5 - Funções"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="subtopic">Subtópico</Label>
             <Input
               id="subtopic"
-              value={formData.subtopic}
-              onChange={(e) => setFormData({ ...formData, subtopic: e.target.value })}
-              placeholder="Ex: Parábolas e gráficos"
+              value={subtopic}
+              onChange={(e) => setSubtopic(e.target.value)}
+              placeholder="Ex: Função quadrática"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_page">Página Inicial</Label>
-              <Input
-                id="start_page"
-                type="number"
-                value={formData.start_page}
-                onChange={(e) => setFormData({ ...formData, start_page: e.target.value })}
-                placeholder="Ex: 45"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="end_page">Página Final</Label>
-              <Input
-                id="end_page"
-                type="number"
-                value={formData.end_page}
-                onChange={(e) => setFormData({ ...formData, end_page: e.target.value })}
-                placeholder="Ex: 52"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="correct_exercises">Exercícios Corretos</Label>
-              <Input
-                id="correct_exercises"
-                type="number"
-                min="0"
-                value={formData.correct_exercises}
-                onChange={(e) => setFormData({ ...formData, correct_exercises: e.target.value })}
-                placeholder="Ex: 8"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="incorrect_exercises">Exercícios Incorretos</Label>
-              <Input
-                id="incorrect_exercises"
-                type="number"
-                min="0"
-                value={formData.incorrect_exercises}
-                onChange={(e) => setFormData({ ...formData, incorrect_exercises: e.target.value })}
-                placeholder="Ex: 2"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="video_start_time">Tempo Inicial do Vídeo</Label>
-              <Input
-                id="video_start_time"
-                value={formData.video_start_time}
-                onChange={(e) => setFormData({ ...formData, video_start_time: e.target.value })}
-                placeholder="Ex: 15:30"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="video_end_time">Tempo Final do Vídeo</Label>
-              <Input
-                id="video_end_time"
-                value={formData.video_end_time}
-                onChange={(e) => setFormData({ ...formData, video_end_time: e.target.value })}
-                placeholder="Ex: 45:20"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="comment">Comentários</Label>
+            <Label htmlFor="comment">Observações</Label>
             <Textarea
               id="comment"
-              value={formData.comment}
-              onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-              placeholder="Observações sobre a sessão de estudo..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Comentários sobre a sessão de estudo"
               rows={3}
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar"}
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading ? "Registrando..." : "Registrar"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
