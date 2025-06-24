@@ -30,9 +30,10 @@ interface AddStudyTimeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStudyTimeAdded?: () => void;
+  defaultTime?: number;
 }
 
-export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded }: AddStudyTimeDialogProps) {
+export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defaultTime }: AddStudyTimeDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -60,6 +61,12 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded }: Add
       setSelectedTopic("");
     }
   }, [selectedSubject]);
+
+  useEffect(() => {
+    if (defaultTime && defaultTime > 0) {
+      setStudyTime(defaultTime.toString());
+    }
+  }, [defaultTime]);
 
   const fetchSubjects = async () => {
     try {
