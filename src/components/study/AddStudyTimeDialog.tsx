@@ -112,13 +112,22 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defau
     try {
       setLoading(true);
       
+      // Garantir que a data seja salva corretamente no timezone local
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateString = localDate.toISOString().split('T')[0];
+      
+      // Obter horário atual formatado corretamente
+      const now = new Date();
+      const timeString = now.toTimeString().split(' ')[0]; // HH:MM:SS format
+
       const { error } = await supabase
         .from('study_sessions')
         .insert({
           user_id: user?.id,
           subject_id: selectedSubject,
           topic_id: selectedTopic || null,
-          date: date.toISOString().split('T')[0],
+          date: dateString,
+          registration_time: timeString,
           study_time: parseInt(studyTime),
           correct_exercises: correctExercises ? parseInt(correctExercises) : null,
           incorrect_exercises: incorrectExercises ? parseInt(incorrectExercises) : null,
@@ -128,6 +137,47 @@ export function AddStudyTimeDialog({ open, onOpenChange, onStudyTimeAdded, defau
         });
 
       if (error) throw error;
+
+      // Registrar questões individuais se especificadas
+      if ((correctExercises && parseInt(correctExercises) > 0) || (incorrectExercises && parseInt(incorrectExercises) > 0)) {
+        const questions = [];
+        
+        // Adicionar questões corretas
+        if (correctExercises && parseInt(correctExercises) > 0) {
+          for (let i = 0; i < parseInt(correctExercises); i++) {
+            questions.push({
+              user_id: user?.id,
+              topic_id: selectedTopic || null,
+              content: `Questão ${i + 1} - ${lesson || subtopic || 'Estudo'}`,
+              answer: 'Correta',
+              is_correct: true
+            });
+          }
+        }
+        
+        // Adicionar questões incorretas
+        if (incorrectExercises && parseInt(incorrectExercises) > 0) {
+          for (let i = 0; i < parseInt(incorrectExercises); i++) {
+            questions.push({
+              user_id: user?.id,
+              topic_id: selectedTopic || null,
+              content: `Questão ${i + 1} - ${lesson || subtopic || 'Estudo'}`,
+              answer: 'Incorreta',
+              is_correct: false
+            });
+          }
+        }
+
+        if (questions.length > 0) {
+          const { error: questionsError } = await supabase
+            .from('questions')
+            .insert(questions);
+
+          if (questionsError) {
+            console.error("Error inserting questions:", questionsError);
+          }
+        }
+      }
 
       toast({
         title: "Sucesso!",

@@ -12,6 +12,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyTimeButton } from "@/components/study/StudyTimeButton";
 import { SubscriptionBanner } from "@/components/subscription/SubscriptionBanner";
 import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
+import { GoalNotifications } from "@/components/goals/GoalNotifications";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -195,7 +196,7 @@ export default function Index() {
           title: session.lesson || session.subtopic || "Sessão de estudo",
           subject: subjectsMap.get(session.subject_id) || "Matéria",
           date: new Date(session.date).toLocaleDateString("pt-BR"),
-          time: session.registration_time,
+          time: session.registration_time ? session.registration_time.slice(0, 5) : "", // Format HH:MM
           duration: `${session.study_time} min`
         }));
         
@@ -216,7 +217,7 @@ export default function Index() {
           id: session.id,
           title: session.lesson || session.subtopic || "Sessão de estudo",
           subject: "Matéria",
-          time: session.registration_time,
+          time: session.registration_time ? session.registration_time.slice(0, 5) : "",
           duration: `${session.study_time} min`,
           status: "completed"
         })) || []
@@ -310,6 +311,9 @@ export default function Index() {
         </div>
         <StudyTimeButton onStudyTimeAdded={handleStudyTimeAdded} />
       </div>
+
+      {/* Goal notifications */}
+      <GoalNotifications />
 
       {/* Exam countdown and goals */}
       {(userSettings.daysUntilExam !== null || userSettings.weeklyGoal) && (

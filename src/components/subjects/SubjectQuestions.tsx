@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, X, Plus, Book } from "lucide-react";
+import { Plus, Book } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export function SubjectQuestions({ subjectId }: SubjectQuestionsProps) {
       const stats = await Promise.all(topics.map(async (topic) => {
         const { data, error } = await supabase
           .from('questions')
-          .select('*')
+          .select('is_correct')
           .eq('topic_id', topic.id);
 
         if (error) throw error;
@@ -179,30 +179,31 @@ export function SubjectQuestions({ subjectId }: SubjectQuestionsProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex flex-wrap gap-3 justify-between text-sm">
-                    <div>
-                      <div className="flex items-center">
-                        <div className="h-3 w-3 rounded-full bg-green-500 mr-1"></div>
-                        <span>Acertos: {stat.correctQuestions}</span>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {stat.correctQuestions}
                       </div>
+                      <div className="text-xs text-muted-foreground">Acertos</div>
                     </div>
-                    <div>
-                      <div className="flex items-center">
-                        <div className="h-3 w-3 rounded-full bg-red-500 mr-1"></div>
-                        <span>Erros: {stat.incorrectQuestions}</span>
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-red-600 dark:text-red-400">
+                        {stat.incorrectQuestions}
                       </div>
+                      <div className="text-xs text-muted-foreground">Erros</div>
                     </div>
-                    <div>
-                      <div className="flex items-center">
-                        <span>Total: {stat.totalQuestions}</span>
+                    <div className="space-y-1">
+                      <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {stat.totalQuestions}
                       </div>
+                      <div className="text-xs text-muted-foreground">Total</div>
                     </div>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span>Aproveitamento</span>
-                      <span>{stat.percentage}%</span>
+                      <span className="font-medium">{stat.percentage}%</span>
                     </div>
                     <Progress value={stat.percentage} className="h-2" />
                   </div>

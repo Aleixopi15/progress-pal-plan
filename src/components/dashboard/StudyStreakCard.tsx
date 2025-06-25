@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Calendar, Award, Target } from "lucide-react";
+import { Flame, Calendar, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -110,9 +110,9 @@ export function StudyStreakCard() {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+    <Card className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-orange-200 dark:border-orange-800">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-orange-800">
+        <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
           <Flame className="h-5 w-5" />
           Sequência de Estudos
         </CardTitle>
@@ -121,22 +121,22 @@ export function StudyStreakCard() {
         <div className="flex items-center justify-between">
           <div className="text-center">
             <div className="flex items-center gap-2">
-              <span className="text-3xl font-bold text-orange-600">
+              <span className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                 {streakData.current_streak}
               </span>
-              <Flame className="h-6 w-6 text-orange-500" />
+              <Flame className="h-6 w-6 text-orange-500 dark:text-orange-400" />
             </div>
-            <p className="text-sm text-orange-700">Dias seguidos</p>
+            <p className="text-sm text-orange-700 dark:text-orange-300">Dias seguidos</p>
           </div>
           
           <div className="text-center">
             <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-amber-500" />
-              <span className="text-lg font-semibold text-amber-600">
+              <Award className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+              <span className="text-lg font-semibold text-amber-600 dark:text-amber-400">
                 {streakData.longest_streak}
               </span>
             </div>
-            <p className="text-sm text-amber-700">Recorde</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">Recorde</p>
           </div>
         </div>
 
@@ -153,9 +153,9 @@ export function StudyStreakCard() {
                   className={cn(
                     "h-8 w-8 mx-auto rounded-full flex items-center justify-center text-xs font-medium border-2 transition-all",
                     day.hasStudied 
-                      ? "bg-orange-500 text-white border-orange-500" 
-                      : "bg-gray-100 text-gray-400 border-gray-200",
-                    day.isToday && "ring-2 ring-orange-300 ring-offset-2"
+                      ? "bg-orange-500 dark:bg-orange-600 text-white border-orange-500 dark:border-orange-600" 
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700",
+                    day.isToday && "ring-2 ring-orange-300 dark:ring-orange-400 ring-offset-2 dark:ring-offset-gray-900"
                   )}
                 >
                   {day.hasStudied ? (
@@ -172,7 +172,7 @@ export function StudyStreakCard() {
 
         {streakData.current_streak >= 7 && (
           <div className="text-center">
-            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+            <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700">
               🔥 Em chamas! Continue assim!
             </Badge>
           </div>
