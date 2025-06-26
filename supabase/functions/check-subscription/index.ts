@@ -57,6 +57,9 @@ serve(async (req) => {
         user_id: user.id,
         subscription_status: "inactive",
         is_active: false,
+        stripe_customer_id: null,
+        current_period_start: null,
+        current_period_end: null,
         updated_at: new Date().toISOString()
       }, { onConflict: "user_id" });
       
@@ -112,29 +115,44 @@ serve(async (req) => {
       }
     }
     
-    // Atualizar registro na tabela user_subscriptions
-    await supabaseClient.from("user_subscriptions").upsert({
+    // Atualizar registro na tabela user_subscriptions - GARANTINDO que is_active seja definido corretamente
+    const updateData = {
       user_id: user.id,
       stripe_customer_id: customerId,
       subscription_status: subscriptionStatus,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      is_active: hasActiveSub,
+      is_active: hasActiveSub, // IMPORTANTE: Definir explicitamente is_active
       updated_at: new Date().toISOString()
-    }, { onConflict: "user_id" });
+    };
+
+    logStep("Dados para atualização", updateData);
+
+    const { error: upsertError } = await supabaseClient
+      .from("user_subscriptions")
+      .upsert(updateData, { onConflict: "user_id" });
+
+    if (upsertError) {
+      logStep("Erro ao atualizar banco de dados", { error: upsertError });
+      throw new Error(`Erro ao atualizar banco: ${upsertError.message}`);
+    }
 
     logStep("Banco de dados atualizado com informações da assinatura", { 
       subscribed: hasActiveSub, 
       status: subscriptionStatus
     });
     
-    return new Response(JSON.stringify({
+    const responseData = {
       subscription_status: subscriptionStatus,
       stripe_customer_id: customerId,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
       is_active: hasActiveSub
-    }), {
+    };
+
+    logStep("Resposta final", responseData);
+    
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

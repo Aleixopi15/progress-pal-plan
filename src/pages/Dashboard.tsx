@@ -8,7 +8,6 @@ import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
 import { RecentStudySessions } from "@/components/dashboard/RecentStudySessions";
 import { DailyGoalsCard } from "@/components/dashboard/DailyGoalsCard";
 import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
-import { Button } from "@/components/ui/button";
 import { Clock, BookOpen, Target, Award, Calendar, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -222,21 +221,19 @@ export default function Dashboard() {
   const weeklyProgress = weeklyTarget > 0 ? Math.round((weeklyStudyMinutes / weeklyTarget) * 100) : 0;
 
   return (
-    <div className="animate-fade-in p-4 md:p-6">
-      <div className="flex items-center justify-between mb-6">
-        <PageTitle title="Dashboard" subtitle="Bem-vindo(a) de volta!">
-          <Button>Planejar Nova Sessão</Button>
-        </PageTitle>
+    <div className="animate-fade-in p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <PageTitle title="Dashboard" subtitle="Bem-vindo(a) de volta!" />
         <StudyTimeButton />
       </div>
 
       {/* Exam countdown banner */}
       {daysUntilExam !== null && examInfo && (
-        <Card className="mb-6 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
+        <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <Calendar className="h-8 w-8 text-primary" />
+                <Calendar className="h-8 w-8 text-primary flex-shrink-0" />
                 <div>
                   <h3 className="text-lg font-semibold">{examInfo}</h3>
                   <p className="text-muted-foreground">
@@ -244,13 +241,14 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <TrendingUp className="h-6 w-6 text-secondary" />
+              <TrendingUp className="h-6 w-6 text-secondary flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-4">
+      {/* Stats Cards */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Horas Estudadas Total"
           value={formatMinutesToHoursAndMinutes(totalStudyMinutes)}
@@ -278,7 +276,8 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {/* Charts */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Horas de Estudo na Semana</CardTitle>
@@ -291,7 +290,8 @@ export default function Dashboard() {
         <StudyStreakCard />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Bottom Section */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <DailyGoalsCard />
         </div>

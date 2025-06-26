@@ -18,7 +18,11 @@ export function RequireSubscription({
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('RequireSubscription - Dados da assinatura:', subscriptionData);
+    console.log('RequireSubscription - Carregando:', loading);
+    
     if (!loading && !subscriptionData.is_active) {
+      console.log('RequireSubscription - Redirecionando para configurações devido a assinatura inativa');
       toast({
         title: "Assinatura requerida",
         description: "Você precisa ter uma assinatura ativa para acessar esta área",
@@ -27,6 +31,12 @@ export function RequireSubscription({
       navigate(redirectTo);
     }
   }, [subscriptionData.is_active, loading, navigate, redirectTo]);
+
+  console.log('RequireSubscription - Estado atual:', { 
+    loading, 
+    isActive: subscriptionData.is_active,
+    status: subscriptionData.subscription_status 
+  });
 
   if (loading) {
     return (
