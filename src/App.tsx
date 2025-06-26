@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/lib/auth";
 import { SubscriptionProvider } from "@/lib/subscription";
@@ -52,7 +52,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/auth" element={<Auth />} />
-                    <Route path="/app" element={<DashboardLayout />}>
+                    <Route path="/app" element={<DashboardLayout><Outlet /></DashboardLayout>}>
                       <Route index element={<Index />} />
                       <Route path="dashboard" element={<Dashboard />} />
                       <Route path="subjects" element={<Subjects />} />
