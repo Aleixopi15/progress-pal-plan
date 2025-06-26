@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Target, Trophy, CreditCard } from "lucide-react";
+import { Calendar, Target, Trophy, CreditCard, Clock, HelpCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -18,6 +18,9 @@ interface UserSettings {
   data_prova: string;
   vestibular_pretendido: string;
   meta_horas_semanais: number;
+  meta_horas_diarias: number;
+  meta_questoes_diarias: number;
+  meta_questoes_semanais: number;
 }
 
 export default function Settings() {
@@ -30,6 +33,9 @@ export default function Settings() {
     data_prova: "",
     vestibular_pretendido: "",
     meta_horas_semanais: 40,
+    meta_horas_diarias: 6,
+    meta_questoes_diarias: 50,
+    meta_questoes_semanais: 350,
   });
 
   useEffect(() => {
@@ -56,6 +62,9 @@ export default function Settings() {
           data_prova: data.data_prova || "",
           vestibular_pretendido: data.vestibular_pretendido || "",
           meta_horas_semanais: data.meta_horas_semanais || 40,
+          meta_horas_diarias: data.meta_horas_diarias || 6,
+          meta_questoes_diarias: data.meta_questoes_diarias || 50,
+          meta_questoes_semanais: data.meta_questoes_semanais || 350,
         });
       }
     } catch (error) {
@@ -81,20 +90,21 @@ export default function Settings() {
         .maybeSingle();
 
       if (existingSettings) {
-        // Update existing settings
         const { error } = await supabase
           .from('user_settings')
           .update({
             data_prova: settings.data_prova || null,
             vestibular_pretendido: settings.vestibular_pretendido || null,
             meta_horas_semanais: settings.meta_horas_semanais,
+            meta_horas_diarias: settings.meta_horas_diarias,
+            meta_questoes_diarias: settings.meta_questoes_diarias,
+            meta_questoes_semanais: settings.meta_questoes_semanais,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', user?.id);
 
         if (error) throw error;
       } else {
-        // Create new settings
         const { error } = await supabase
           .from('user_settings')
           .insert({
@@ -102,6 +112,9 @@ export default function Settings() {
             data_prova: settings.data_prova || null,
             vestibular_pretendido: settings.vestibular_pretendido || null,
             meta_horas_semanais: settings.meta_horas_semanais,
+            meta_horas_diarias: settings.meta_horas_diarias,
+            meta_questoes_diarias: settings.meta_questoes_diarias,
+            meta_questoes_semanais: settings.meta_questoes_semanais,
           });
 
         if (error) throw error;
@@ -145,95 +158,156 @@ export default function Settings() {
 
   if (subscriptionLoading || loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">Carregando...</div>
+      <div className="animate-fade-in p-4 md:p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">Carregando...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in p-4 md:p-6 max-w-4xl mx-auto">
       <PageTitle 
         title="Configurações" 
         subtitle="Gerencie suas metas e configurações de estudo" 
       />
       
-      <Tabs defaultValue="study" className="mt-8">
-        <TabsList>
+      <Tabs defaultValue="study" className="mt-8 w-full">
+        <TabsList className="w-full grid grid-cols-2">
           <TabsTrigger value="study">Configurações de Estudo</TabsTrigger>
           <TabsTrigger value="account">Gerenciamento de Conta</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="study" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Data da Prova
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="data_prova">Data da prova</Label>
-                  <Input
-                    id="data_prova"
-                    type="date"
-                    value={settings.data_prova}
-                    onChange={(e) => handleInputChange('data_prova', e.target.value)}
-                  />
-                </div>
-                {daysUntilExam !== null && (
-                  <div className="p-3 bg-primary/10 rounded-lg">
-                    <p className="text-sm font-medium">
-                      Faltam <span className="text-primary font-bold">{daysUntilExam} dias</span> para sua prova
-                    </p>
+        <TabsContent value="study" className="space-y-6 mt-6">
+          <div className="grid gap-6">
+            {/* Informações do Exame */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Data da Prova
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="data_prova">Data da prova</Label>
+                    <Input
+                      id="data_prova"
+                      type="date"
+                      value={settings.data_prova}
+                      onChange={(e) => handleInputChange('data_prova', e.target.value)}
+                    />
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  {daysUntilExam !== null && (
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <p className="text-sm font-medium">
+                        Faltam <span className="text-primary font-bold">{daysUntilExam} dias</span> para sua prova
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Vestibular
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div>
+                    <Label htmlFor="vestibular">Vestibular pretendido</Label>
+                    <Input
+                      id="vestibular"
+                      placeholder="Ex: ENEM, Fuvest, Unicamp..."
+                      value={settings.vestibular_pretendido}
+                      onChange={(e) => handleInputChange('vestibular_pretendido', e.target.value)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Metas de Estudo */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5" />
-                  Vestibular
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div>
-                  <Label htmlFor="vestibular">Vestibular pretendido</Label>
-                  <Input
-                    id="vestibular"
-                    placeholder="Ex: ENEM, Fuvest, Unicamp..."
-                    value={settings.vestibular_pretendido}
-                    onChange={(e) => handleInputChange('vestibular_pretendido', e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Meta de Estudos
+                  Metas de Estudo
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="meta_horas">Meta de horas semanais de estudo</Label>
-                  <Input
-                    id="meta_horas"
-                    type="number"
-                    min="1"
-                    max="168"
-                    value={settings.meta_horas_semanais}
-                    onChange={(e) => handleInputChange('meta_horas_semanais', parseInt(e.target.value) || 40)}
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Aproximadamente {Math.round(settings.meta_horas_semanais / 7)} horas por dia
-                  </p>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Horas de Estudo
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="meta_horas_diarias">Meta diária (horas)</Label>
+                        <Input
+                          id="meta_horas_diarias"
+                          type="number"
+                          min="1"
+                          max="24"
+                          value={settings.meta_horas_diarias}
+                          onChange={(e) => handleInputChange('meta_horas_diarias', parseInt(e.target.value) || 6)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="meta_horas_semanais">Meta semanal (horas)</Label>
+                        <Input
+                          id="meta_horas_semanais"
+                          type="number"
+                          min="1"
+                          max="168"
+                          value={settings.meta_horas_semanais}
+                          onChange={(e) => handleInputChange('meta_horas_semanais', parseInt(e.target.value) || 40)}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Aproximadamente {Math.round(settings.meta_horas_semanais / 7)} horas por dia
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4" />
+                      Questões
+                    </h4>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="meta_questoes_diarias">Meta diária (questões)</Label>
+                        <Input
+                          id="meta_questoes_diarias"
+                          type="number"
+                          min="1"
+                          max="200"
+                          value={settings.meta_questoes_diarias}
+                          onChange={(e) => handleInputChange('meta_questoes_diarias', parseInt(e.target.value) || 50)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="meta_questoes_semanais">Meta semanal (questões)</Label>
+                        <Input
+                          id="meta_questoes_semanais"
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={settings.meta_questoes_semanais}
+                          onChange={(e) => handleInputChange('meta_questoes_semanais', parseInt(e.target.value) || 350)}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Aproximadamente {Math.round(settings.meta_questoes_semanais / 7)} questões por dia
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
                 <Button onClick={saveSettings} disabled={saving} className="w-full">
@@ -244,7 +318,7 @@ export default function Settings() {
           </div>
         </TabsContent>
         
-        <TabsContent value="account" className="space-y-6">
+        <TabsContent value="account" className="space-y-6 mt-6">
           <div className="grid gap-6">
             <Card>
               <CardHeader>

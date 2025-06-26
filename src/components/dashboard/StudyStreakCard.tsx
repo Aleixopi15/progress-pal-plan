@@ -19,6 +19,19 @@ interface DayStreak {
   isToday: boolean;
 }
 
+// Função para obter a data local no formato correto
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Função para obter o dia da semana correto considerando fuso horário local
+const getLocalDayOfWeek = (date = new Date()) => {
+  return date.getDay();
+};
+
 export function StudyStreakCard() {
   const { user } = useAuth();
   const [streakData, setStreakData] = useState<StreakData>({
@@ -54,14 +67,14 @@ export function StudyStreakCard() {
         });
       }
 
-      // Buscar sessões de estudo dos últimos 7 dias
+      // Buscar sessões de estudo dos últimos 7 dias usando data local
       const today = new Date();
       const last7Days = [];
       
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(today.getDate() - i);
-        last7Days.push(date.toISOString().split('T')[0]);
+        last7Days.push(getLocalDateString(date));
       }
 
       const { data: studySessions } = await supabase
@@ -73,11 +86,15 @@ export function StudyStreakCard() {
       const studiedDates = new Set(studySessions?.map(session => session.date) || []);
       
       const weekData = last7Days.map((dateStr, index) => {
-        const date = new Date(dateStr);
+        const date = new Date(dateStr + 'T00:00:00'); // Força UTC para evitar problemas de fuso
+        const dayOfWeek = getLocalDayOfWeek(date);
+        const dayLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const todayStr = getLocalDateString(today);
+        
         return {
-          date: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()],
+          date: dayLabels[dayOfWeek],
           hasStudied: studiedDates.has(dateStr),
-          isToday: dateStr === today.toISOString().split('T')[0]
+          isToday: dateStr === todayStr
         };
       });
 

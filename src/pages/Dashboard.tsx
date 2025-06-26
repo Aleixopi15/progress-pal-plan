@@ -1,11 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { PageTitle } from "@/components/layout/PageTitle";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { StudyChart } from "@/components/dashboard/StudyChart";
-import { StudyTasks } from "@/components/dashboard/StudyTasks";
 import { StudyStreakCard } from "@/components/dashboard/StudyStreakCard";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
 import { RecentStudySessions } from "@/components/dashboard/RecentStudySessions";
+import { DailyGoalsCard } from "@/components/dashboard/DailyGoalsCard";
 import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
 import { Button } from "@/components/ui/button";
 import { Clock, BookOpen, Target, Award, Calendar, TrendingUp } from "lucide-react";
@@ -36,6 +37,19 @@ interface Session {
   topic_name: string | null;
 }
 
+// Função para obter a data local no formato correto
+const getLocalDateString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Função para obter o dia da semana correto considerando fuso horário local
+const getLocalDayOfWeek = (date = new Date()) => {
+  return date.getDay();
+};
+
 export default function Dashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,7 +60,6 @@ export default function Dashboard() {
   const [weeklyTarget, setWeeklyTarget] = useState(2400); // 40 hours in minutes
   const [daysUntilExam, setDaysUntilExam] = useState<number | null>(null);
   const [examInfo, setExamInfo] = useState<string>("");
-  const [tasksData, setTasksData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -70,8 +83,10 @@ export default function Dashboard() {
 
       if (userSettings) {
         const weeklyTargetHours = userSettings.meta_horas_semanais || 40;
+        const dailyTargetHours = userSettings.meta_horas_diarias || 6;
+        
         setWeeklyTarget(weeklyTargetHours * 60); // Convert to minutes
-        setDailyTarget(Math.round((weeklyTargetHours * 60) / 7)); // Daily target in minutes
+        setDailyTarget(dailyTargetHours * 60); // Convert to minutes
 
         if (userSettings.data_prova) {
           const examDate = new Date(userSettings.data_prova);
@@ -99,104 +114,47 @@ export default function Dashboard() {
       const totalMinutes = studySessions?.reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
       setTotalStudyMinutes(totalMinutes);
 
-      // Calculate weekly study minutes (last 7 days)
+      // Calculate weekly study minutes (last 7 days) - usando data local
       const today = new Date();
-      const lastWeek = new Date();
-      lastWeek.setDate(today.getDate() - 7);
-      
-      const weeklyMinutes = studySessions?.filter(session => {
-        const sessionDate = new Date(session.date);
-        return sessionDate >= lastWeek;
-      }).reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
-      
-      setWeeklyStudyMinutes(weeklyMinutes);
-      
-      // Generate chart data from actual study sessions
-      const last7Days = [];
+      const last7DaysLocal = [];
       
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(today.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        last7DaysLocal.push(getLocalDateString(date));
+      }
+      
+      const weeklyMinutes = studySessions?.filter(session => {
+        return last7DaysLocal.includes(session.date);
+      }).reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
+      
+      setWeeklyStudyMinutes(weeklyMinutes);
+      
+      // Generate chart data from actual study sessions - corrigindo dias da semana
+      const chartDataArray = [];
+      const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(today.getDate() - i);
+        const dateStr = getLocalDateString(date);
+        const dayOfWeek = getLocalDayOfWeek(date);
         
-        last7Days.push({
-          date: dateStr,
-          name: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][date.getDay()],
-          dayOfWeek: date.getDay(),
-          hours: 0,
-          goal: Math.round(dailyTarget / 60 * 10) / 10 // Convert to hours with 1 decimal
+        // Calcular horas estudadas neste dia
+        const dayStudyMinutes = studySessions?.filter(session => 
+          session.date === dateStr
+        ).reduce((sum, session) => sum + (session.study_time || 0), 0) || 0;
+        
+        const hoursStudied = dayStudyMinutes / 60;
+        
+        chartDataArray.push({
+          name: dayLabels[dayOfWeek],
+          hours: Number(hoursStudied.toFixed(1)),
+          goal: Number((dailyTarget / 60).toFixed(1)) // Meta diária em horas
         });
       }
       
-      // Calculate hours studied for each day
-      if (studySessions) {
-        studySessions.forEach(session => {
-          const day = last7Days.find(d => d.date === session.date);
-          if (day) {
-            // Convert minutes to hours with one decimal place
-            day.hours += parseFloat((session.study_time / 60).toFixed(1));
-          }
-        });
-      }
-      
-      // Format chart data
-      const formattedChartData = last7Days.map(day => ({
-        name: day.name,
-        hours: parseFloat(day.hours.toFixed(1)), // Ensure hours is a number with one decimal
-        goal: day.goal
-      }));
-      
-      setChartData(formattedChartData);
-      
-      // Calculate streak data based on actual study sessions
-      const streakDays = last7Days.map(day => {
-        const hasStudied = studySessions?.some(session => session.date === day.date) || false;
-        return {
-          date: day.name,
-          hasStudied
-        };
-      });
-      
-      // Calculate current streak
-      let currentStreak = 0;
-      for (let i = streakDays.length - 1; i >= 0; i--) {
-        if (streakDays[i].hasStudied) {
-          currentStreak++;
-        } else {
-          break;
-        }
-      }
-      
-      // Fetch recent tasks
-      const { data: recentSessions, error: tasksError } = await supabase
-        .from('study_sessions')
-        .select(`
-          id,
-          date,
-          subject_id,
-          subjects:subject_id (name),
-          registration_time,
-          study_time,
-          lesson,
-          subtopic
-        `)
-        .eq('user_id', user?.id)
-        .order('date', { ascending: false })
-        .limit(4);
-      
-      if (tasksError) throw tasksError;
-      
-      // Format tasks data
-      const formattedTasks = recentSessions?.map(session => ({
-        id: session.id,
-        title: session.lesson || session.subtopic || "Sessão de estudo",
-        subject: session.subjects?.name || "Matéria",
-        time: session.registration_time,
-        duration: `${session.study_time} min`,
-        status: "completed" as const,
-      })) || [];
-      
-      setTasksData(formattedTasks);
+      setChartData(chartDataArray);
       
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -208,15 +166,6 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Recent task completion handler
-  const handleCompleteTask = (id: string) => {
-    setTasksData(
-      tasksData.map((task) =>
-        task.id === id ? { ...task, status: "completed" as const } : task
-      )
-    );
   };
 
   const handleViewSessionDetails = async (sessionId: string) => {
@@ -273,7 +222,7 @@ export default function Dashboard() {
   const weeklyProgress = weeklyTarget > 0 ? Math.round((weeklyStudyMinutes / weeklyTarget) * 100) : 0;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <PageTitle title="Dashboard" subtitle="Bem-vindo(a) de volta!">
           <Button>Planejar Nova Sessão</Button>
@@ -344,12 +293,12 @@ export default function Dashboard() {
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <StudyTasks tasks={loading ? [] : tasksData} onComplete={() => {}} />
+          <DailyGoalsCard />
         </div>
         <div>
           <RecentStudySessions 
-            sessions={loading ? [] : tasksData} 
-            onViewDetails={() => {}}
+            sessions={[]} 
+            onViewDetails={handleViewSessionDetails}
           />
         </div>
       </div>

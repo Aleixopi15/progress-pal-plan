@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      daily_goals: {
+        Row: {
+          achieved_hours: number | null
+          achieved_questions: number | null
+          created_at: string
+          date: string
+          id: string
+          target_hours: number
+          target_questions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achieved_hours?: number | null
+          achieved_questions?: number | null
+          created_at?: string
+          date?: string
+          id?: string
+          target_hours?: number
+          target_questions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achieved_hours?: number | null
+          achieved_questions?: number | null
+          created_at?: string
+          date?: string
+          id?: string
+          target_hours?: number
+          target_questions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       goal_notifications: {
         Row: {
           created_at: string
@@ -524,7 +560,10 @@ export type Database = {
           created_at: string
           data_prova: string | null
           id: string
+          meta_horas_diarias: number | null
           meta_horas_semanais: number | null
+          meta_questoes_diarias: number | null
+          meta_questoes_semanais: number | null
           updated_at: string
           user_id: string
           vestibular_pretendido: string | null
@@ -533,7 +572,10 @@ export type Database = {
           created_at?: string
           data_prova?: string | null
           id?: string
+          meta_horas_diarias?: number | null
           meta_horas_semanais?: number | null
+          meta_questoes_diarias?: number | null
+          meta_questoes_semanais?: number | null
           updated_at?: string
           user_id: string
           vestibular_pretendido?: string | null
@@ -542,7 +584,10 @@ export type Database = {
           created_at?: string
           data_prova?: string | null
           id?: string
+          meta_horas_diarias?: number | null
           meta_horas_semanais?: number | null
+          meta_questoes_diarias?: number | null
+          meta_questoes_semanais?: number | null
           updated_at?: string
           user_id?: string
           vestibular_pretendido?: string | null
