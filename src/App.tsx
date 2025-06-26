@@ -68,6 +68,18 @@ function App() {
                       <Route path="simulados" element={<Simulados />} />
                       <Route path="enem-questions" element={<EnemQuestions />} />
                     </Route>
+                    {/* Rotas de compatibilidade para URLs antigas */}
+                    <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+                    <Route path="/subjects" element={<DashboardLayout><Subjects /></DashboardLayout>} />
+                    <Route path="/history" element={<DashboardLayout><History /></DashboardLayout>} />
+                    <Route path="/calendar" element={<DashboardLayout><Calendar /></DashboardLayout>} />
+                    <Route path="/goals" element={<DashboardLayout><Goals /></DashboardLayout>} />
+                    <Route path="/settings" element={<DashboardLayout><Settings /></DashboardLayout>} />
+                    <Route path="/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
+                    <Route path="/progress" element={<DashboardLayout><Progress /></DashboardLayout>} />
+                    <Route path="/activity" element={<DashboardLayout><Activity /></DashboardLayout>} />
+                    <Route path="/simulados" element={<DashboardLayout><Simulados /></DashboardLayout>} />
+                    <Route path="/enem-questions" element={<DashboardLayout><EnemQuestions /></DashboardLayout>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </SidebarProvider>
