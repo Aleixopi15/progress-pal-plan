@@ -51,29 +51,38 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      console.log('checkSubscription - Chamando função check-subscription');
+      console.log('checkSubscription - Chamando função check-subscription para usuário:', user.id);
       const { data, error } = await supabase.functions.invoke("check-subscription");
       
       if (error) {
         console.error("Erro ao verificar assinatura:", error);
         setSubscriptionData({ ...initialSubscriptionData, subscription_status: "error" });
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível verificar sua assinatura. Tente novamente mais tarde."
+        });
         return;
       }
 
       console.log('checkSubscription - Resposta da função:', data);
 
-      if (data) {
+      if (data && typeof data === 'object') {
         const subscriptionInfo = data as SubscriptionData;
-        console.log('checkSubscription - Definindo dados da assinatura:', subscriptionInfo);
-        setSubscriptionData({
+        
+        // Validar e garantir tipos corretos
+        const validatedData: SubscriptionData = {
           subscription_status: subscriptionInfo.subscription_status || "inactive",
           stripe_customer_id: subscriptionInfo.stripe_customer_id || null,
           current_period_start: subscriptionInfo.current_period_start || null,
           current_period_end: subscriptionInfo.current_period_end || null,
           is_active: Boolean(subscriptionInfo.is_active) // Garantir que seja boolean
-        });
+        };
+        
+        console.log('checkSubscription - Definindo dados validados da assinatura:', validatedData);
+        setSubscriptionData(validatedData);
       } else {
-        console.log('checkSubscription - Sem dados retornados, usando estado inicial');
+        console.log('checkSubscription - Dados inválidos retornados, usando estado inicial');
         setSubscriptionData(initialSubscriptionData);
       }
     } catch (error) {
@@ -136,27 +145,33 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   // Verificar assinatura ao carregar o componente e quando o usuário mudar
   useEffect(() => {
     console.log('SubscriptionProvider useEffect - Usuario mudou:', user?.id);
-    if (user) {
+    if (user && session) {
       checkSubscription();
     } else {
+      console.log('SubscriptionProvider - Sem usuário/sessão, resetando dados');
       setSubscriptionData(initialSubscriptionData);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, session]);
 
-  // Verificar assinatura periodicamente (a cada 5 minutos)
+  // Verificar assinatura periodicamente (a cada 2 minutos) - reduzido para evitar muitas chamadas
   useEffect(() => {
-    if (!user) return;
+    if (!user || !session) return;
     
     const interval = setInterval(() => {
       console.log('SubscriptionProvider - Verificação periódica de assinatura');
       checkSubscription();
-    }, 5 * 60 * 1000);
+    }, 2 * 60 * 1000); // 2 minutos
     
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, session]);
 
-  console.log('SubscriptionProvider - Estado atual:', { subscriptionData, loading });
+  console.log('SubscriptionProvider - Estado atual:', { 
+    subscriptionData, 
+    loading, 
+    userExists: !!user,
+    sessionExists: !!session 
+  });
 
   return (
     <SubscriptionContext.Provider

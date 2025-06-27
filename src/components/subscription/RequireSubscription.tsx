@@ -21,16 +21,19 @@ export function RequireSubscription({
     console.log('RequireSubscription - Dados da assinatura:', subscriptionData);
     console.log('RequireSubscription - Carregando:', loading);
     
-    if (!loading && !subscriptionData.is_active) {
-      console.log('RequireSubscription - Redirecionando para configurações devido a assinatura inativa');
-      toast({
-        title: "Assinatura requerida",
-        description: "Você precisa ter uma assinatura ativa para acessar esta área",
-        variant: "destructive"
-      });
-      navigate(redirectTo);
+    // Só redirecionar se não estiver carregando e a assinatura não estiver ativa
+    if (!loading && subscriptionData.subscription_status !== "error") {
+      if (!subscriptionData.is_active) {
+        console.log('RequireSubscription - Redirecionando para configurações devido a assinatura inativa');
+        toast({
+          title: "Assinatura requerida",
+          description: "Você precisa ter uma assinatura ativa para acessar esta área",
+          variant: "destructive"
+        });
+        navigate(redirectTo);
+      }
     }
-  }, [subscriptionData.is_active, loading, navigate, redirectTo]);
+  }, [subscriptionData.is_active, subscriptionData.subscription_status, loading, navigate, redirectTo]);
 
   console.log('RequireSubscription - Estado atual:', { 
     loading, 
@@ -38,6 +41,7 @@ export function RequireSubscription({
     status: subscriptionData.subscription_status 
   });
 
+  // Mostrar loading enquanto verifica a assinatura
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-12">
@@ -46,5 +50,12 @@ export function RequireSubscription({
     );
   }
 
+  // Se houver erro, mostrar os filhos mesmo assim (para evitar loops)
+  if (subscriptionData.subscription_status === "error") {
+    console.log('RequireSubscription - Erro na verificação, permitindo acesso');
+    return <>{children}</>;
+  }
+
+  // Só renderizar filhos se a assinatura estiver ativa
   return subscriptionData.is_active ? <>{children}</> : null;
 }

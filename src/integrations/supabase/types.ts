@@ -597,7 +597,10 @@ export type Database = {
       user_subscriptions: {
         Row: {
           created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
           id: string
+          is_active: boolean
           stripe_customer_id: string | null
           subscription_status: string | null
           updated_at: string | null
@@ -605,7 +608,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
           id?: string
+          is_active?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string | null
           updated_at?: string | null
@@ -613,7 +619,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
           id?: string
+          is_active?: boolean
           stripe_customer_id?: string | null
           subscription_status?: string | null
           updated_at?: string | null

@@ -53,7 +53,7 @@ serve(async (req) => {
       logStep("Nenhum cliente encontrado, atualizando estado não assinado");
       
       // Atualizar ou criar registro na tabela user_subscriptions
-      await supabaseClient.from("user_subscriptions").upsert({
+      const { error: upsertError } = await supabaseClient.from("user_subscriptions").upsert({
         user_id: user.id,
         subscription_status: "inactive",
         is_active: false,
@@ -62,6 +62,11 @@ serve(async (req) => {
         current_period_end: null,
         updated_at: new Date().toISOString()
       }, { onConflict: "user_id" });
+
+      if (upsertError) {
+        logStep("Erro ao atualizar banco (usuário sem cliente)", { error: upsertError });
+        throw new Error(`Erro ao atualizar banco: ${upsertError.message}`);
+      }
       
       return new Response(JSON.stringify({ 
         subscription_status: "inactive",
@@ -78,55 +83,66 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Cliente Stripe encontrado", { customerId });
 
-    const subscriptions = await stripe.subscriptions.list({
+    // Buscar assinaturas ativas primeiro
+    const activeSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
       limit: 1,
     });
     
-    // Verificar se há assinatura ativa
-    const hasActiveSub = subscriptions.data.length > 0;
-    let subscription = null;
     let subscriptionStatus = "inactive";
     let currentPeriodStart = null;
     let currentPeriodEnd = null;
+    let isActive = false;
     
-    if (hasActiveSub) {
-      subscription = subscriptions.data[0];
+    if (activeSubscriptions.data.length > 0) {
+      const subscription = activeSubscriptions.data[0];
       subscriptionStatus = "active";
+      isActive = true;
       currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
       currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
       
       logStep("Assinatura ativa encontrada", { 
         subscriptionId: subscription.id, 
-        endDate: currentPeriodEnd
+        startDate: currentPeriodStart,
+        endDate: currentPeriodEnd,
+        status: subscription.status
       });
     } else {
-      // Verificar se existe uma assinatura cancelada
-      const canceledSubscriptions = await stripe.subscriptions.list({
+      // Verificar se existe uma assinatura cancelada ou vencida
+      const allSubscriptions = await stripe.subscriptions.list({
         customer: customerId,
-        status: "canceled",
-        limit: 1,
+        limit: 5,
       });
       
-      if (canceledSubscriptions.data.length > 0) {
-        subscriptionStatus = "canceled";
-        logStep("Assinatura cancelada encontrada");
+      if (allSubscriptions.data.length > 0) {
+        const latestSub = allSubscriptions.data[0];
+        if (latestSub.status === "canceled") {
+          subscriptionStatus = "canceled";
+        } else if (latestSub.status === "past_due") {
+          subscriptionStatus = "past_due";
+        }
+        logStep("Assinatura não-ativa encontrada", { 
+          status: latestSub.status,
+          subscriptionId: latestSub.id
+        });
+      } else {
+        logStep("Nenhuma assinatura encontrada para o cliente");
       }
     }
     
-    // Atualizar registro na tabela user_subscriptions - GARANTINDO que is_active seja definido corretamente
+    // Dados para atualização - garantindo tipos corretos
     const updateData = {
       user_id: user.id,
       stripe_customer_id: customerId,
       subscription_status: subscriptionStatus,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      is_active: hasActiveSub, // IMPORTANTE: Definir explicitamente is_active
+      is_active: isActive, // Garantir que seja boolean
       updated_at: new Date().toISOString()
     };
 
-    logStep("Dados para atualização", updateData);
+    logStep("Preparando atualização do banco", updateData);
 
     const { error: upsertError } = await supabaseClient
       .from("user_subscriptions")
@@ -137,8 +153,8 @@ serve(async (req) => {
       throw new Error(`Erro ao atualizar banco: ${upsertError.message}`);
     }
 
-    logStep("Banco de dados atualizado com informações da assinatura", { 
-      subscribed: hasActiveSub, 
+    logStep("Banco de dados atualizado com sucesso", { 
+      isActive: isActive, 
       status: subscriptionStatus
     });
     
@@ -147,7 +163,7 @@ serve(async (req) => {
       stripe_customer_id: customerId,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      is_active: hasActiveSub
+      is_active: isActive
     };
 
     logStep("Resposta final", responseData);
@@ -158,7 +174,7 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERRO em check-subscription", { message: errorMessage });
+    logStep("ERRO em check-subscription", { message: errorMessage, stack: error instanceof Error ? error.stack : undefined });
     
     return new Response(JSON.stringify({ 
       error: errorMessage,
