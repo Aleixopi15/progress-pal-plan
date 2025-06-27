@@ -21,9 +21,10 @@ export function RequireSubscription({
     console.log('RequireSubscription - Dados da assinatura:', subscriptionData);
     console.log('RequireSubscription - Carregando:', loading);
     
-    // Só redirecionar se não estiver carregando e a assinatura não estiver ativa
+    // Só redirecionar se não estiver carregando e definitivamente não tiver assinatura
     if (!loading && subscriptionData.subscription_status !== "error") {
-      if (!subscriptionData.is_active) {
+      // Ser mais permissivo - só bloquear se explicitamente inativo
+      if (subscriptionData.subscription_status === "inactive" && !subscriptionData.is_active) {
         console.log('RequireSubscription - Redirecionando para configurações devido a assinatura inativa');
         toast({
           title: "Assinatura requerida",
@@ -50,12 +51,12 @@ export function RequireSubscription({
     );
   }
 
-  // Se houver erro, mostrar os filhos mesmo assim (para evitar loops)
-  if (subscriptionData.subscription_status === "error") {
-    console.log('RequireSubscription - Erro na verificação, permitindo acesso');
+  // Se houver erro ou status ativo, permitir acesso
+  if (subscriptionData.subscription_status === "error" || subscriptionData.is_active || subscriptionData.subscription_status === "active") {
+    console.log('RequireSubscription - Permitindo acesso');
     return <>{children}</>;
   }
 
-  // Só renderizar filhos se a assinatura estiver ativa
-  return subscriptionData.is_active ? <>{children}</> : null;
+  // Só bloquear se definitivamente inativo
+  return subscriptionData.subscription_status === "inactive" && !subscriptionData.is_active ? null : <>{children}</>;
 }

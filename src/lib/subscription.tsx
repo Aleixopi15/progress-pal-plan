@@ -56,12 +56,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error("Erro ao verificar assinatura:", error);
-        setSubscriptionData({ ...initialSubscriptionData, subscription_status: "error" });
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Não foi possível verificar sua assinatura. Tente novamente mais tarde."
-        });
+        // Em caso de erro, assumir que não tem assinatura ativa para não bloquear o usuário
+        setSubscriptionData({ ...initialSubscriptionData, subscription_status: "inactive" });
         return;
       }
 
@@ -87,12 +83,8 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Erro ao verificar assinatura:", error);
-      setSubscriptionData({ ...initialSubscriptionData, subscription_status: "error" });
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível verificar sua assinatura. Tente novamente mais tarde."
-      });
+      // Em caso de erro, não bloquear o usuário
+      setSubscriptionData({ ...initialSubscriptionData, subscription_status: "inactive" });
     } finally {
       setLoading(false);
     }
@@ -152,18 +144,6 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       setSubscriptionData(initialSubscriptionData);
       setLoading(false);
     }
-  }, [user, session]);
-
-  // Verificar assinatura periodicamente (a cada 30 segundos) - só quando necessário
-  useEffect(() => {
-    if (!user || !session) return;
-    
-    const interval = setInterval(() => {
-      console.log('SubscriptionProvider - Verificação periódica de assinatura');
-      checkSubscription();
-    }, 30 * 1000); // 30 segundos
-    
-    return () => clearInterval(interval);
   }, [user, session]);
 
   console.log('SubscriptionProvider - Estado atual:', { 

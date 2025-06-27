@@ -15,8 +15,8 @@ import { SessionDetailDialog } from "@/components/history/SessionDetailDialog";
 import { GoalNotifications } from "@/components/goals/GoalNotifications";
 import { formatMinutesToHoursAndMinutes } from "@/lib/formatters";
 import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, Target } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar, Target, BookOpen } from "lucide-react";
 
 interface Session {
   id: string;
@@ -38,6 +38,14 @@ interface Session {
   topic_name: string | null;
 }
 
+interface Subject {
+  id: string;
+  name: string;
+  description: string | null;
+  topicsCount: number;
+  totalStudyTime: number;
+}
+
 export default function Index() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,6 +64,7 @@ export default function Index() {
   });
   const [tasks, setTasks] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
@@ -90,6 +99,28 @@ export default function Index() {
           weeklyProgress: 0
         });
       }
+
+      // Fetch subjects with their topics count and study time
+      const { data: subjectsData, error: subjectsError } = await supabase
+        .from("subjects")
+        .select(`
+          id, name, description,
+          topics(id),
+          study_sessions(study_time)
+        `)
+        .eq("user_id", user?.id);
+
+      if (subjectsError) throw subjectsError;
+
+      const formattedSubjects = subjectsData?.map(subject => ({
+        id: subject.id,
+        name: subject.name,
+        description: subject.description,
+        topicsCount: subject.topics?.length || 0,
+        totalStudyTime: subject.study_sessions?.reduce((sum: number, session: any) => sum + (session.study_time || 0), 0) || 0
+      })) || [];
+
+      setSubjects(formattedSubjects);
       
       // Fetch study sessions data for stats
       const { data: studySessions, error: sessionsError } = await supabase
@@ -360,9 +391,9 @@ export default function Index() {
           description="Total acumulado" 
         />
         <StatCard 
-          title="Questões" 
-          value={studyData.totalQuestions.toString()} 
-          description="Resolvidas" 
+          title="Matérias" 
+          value={subjects.length.toString()} 
+          description="Cadastradas" 
         />
         <StatCard 
           title="Aproveitamento" 
@@ -370,6 +401,40 @@ export default function Index() {
           description="de acertos" 
         />
       </div>
+
+      {/* Card de matérias */}
+      {subjects.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Suas Matérias
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {subjects.slice(0, 6).map((subject) => (
+                <div key={subject.id} className="p-4 border rounded-lg">
+                  <h4 className="font-semibold">{subject.name}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {subject.topicsCount} tópicos • {formatMinutesToHoursAndMinutes(subject.totalStudyTime)} estudadas
+                  </p>
+                  {subject.description && (
+                    <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                      {subject.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {subjects.length > 6 && (
+              <p className="text-sm text-muted-foreground mt-4 text-center">
+                E mais {subjects.length - 6} matérias...
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StudyStreakCard />

@@ -50,53 +50,7 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("Nenhum cliente encontrado, atualizando estado não assinado");
-      
-      // Verificar se registro já existe
-      const { data: existingRecord } = await supabaseClient
-        .from("user_subscriptions")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (existingRecord) {
-        // Atualizar registro existente
-        const { error: updateError } = await supabaseClient
-          .from("user_subscriptions")
-          .update({
-            subscription_status: "inactive",
-            is_active: false,
-            stripe_customer_id: null,
-            current_period_start: null,
-            current_period_end: null,
-            updated_at: new Date().toISOString()
-          })
-          .eq("user_id", user.id);
-
-        if (updateError) {
-          logStep("Erro ao atualizar registro existente", { error: updateError });
-          throw new Error(`Erro ao atualizar banco: ${updateError.message}`);
-        }
-      } else {
-        // Inserir novo registro
-        const { error: insertError } = await supabaseClient
-          .from("user_subscriptions")
-          .insert({
-            user_id: user.id,
-            subscription_status: "inactive",
-            is_active: false,
-            stripe_customer_id: null,
-            current_period_start: null,
-            current_period_end: null,
-            updated_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          logStep("Erro ao inserir novo registro", { error: insertError });
-          throw new Error(`Erro ao inserir banco: ${insertError.message}`);
-        }
-      }
-      
+      logStep("Nenhum cliente encontrado, retornando estado inativo");
       return new Response(JSON.stringify({ 
         subscription_status: "inactive",
         stripe_customer_id: null,
@@ -112,7 +66,7 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Cliente Stripe encontrado", { customerId });
 
-    // Buscar assinaturas ativas primeiro
+    // Buscar assinaturas ativas
     const activeSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
@@ -138,77 +92,8 @@ serve(async (req) => {
         status: subscription.status
       });
     } else {
-      // Verificar se existe uma assinatura cancelada ou vencida
-      const allSubscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        limit: 5,
-      });
-      
-      if (allSubscriptions.data.length > 0) {
-        const latestSub = allSubscriptions.data[0];
-        if (latestSub.status === "canceled") {
-          subscriptionStatus = "canceled";
-        } else if (latestSub.status === "past_due") {
-          subscriptionStatus = "past_due";
-        }
-        logStep("Assinatura não-ativa encontrada", { 
-          status: latestSub.status,
-          subscriptionId: latestSub.id
-        });
-      } else {
-        logStep("Nenhuma assinatura encontrada para o cliente");
-      }
+      logStep("Nenhuma assinatura ativa encontrada");
     }
-    
-    // Dados para atualização
-    const updateData = {
-      stripe_customer_id: customerId,
-      subscription_status: subscriptionStatus,
-      current_period_start: currentPeriodStart,
-      current_period_end: currentPeriodEnd,
-      is_active: isActive,
-      updated_at: new Date().toISOString()
-    };
-
-    logStep("Preparando atualização do banco", updateData);
-
-    // Verificar se registro já existe
-    const { data: existingRecord } = await supabaseClient
-      .from("user_subscriptions")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (existingRecord) {
-      // Atualizar registro existente
-      const { error: updateError } = await supabaseClient
-        .from("user_subscriptions")
-        .update(updateData)
-        .eq("user_id", user.id);
-
-      if (updateError) {
-        logStep("Erro ao atualizar banco de dados", { error: updateError });
-        throw new Error(`Erro ao atualizar banco: ${updateError.message}`);
-      }
-    } else {
-      // Inserir novo registro
-      const { error: insertError } = await supabaseClient
-        .from("user_subscriptions")
-        .insert({
-          user_id: user.id,
-          ...updateData
-        });
-
-      if (insertError) {
-        logStep("Erro ao inserir no banco de dados", { error: insertError });
-        throw new Error(`Erro ao inserir banco: ${insertError.message}`);
-      }
-    }
-
-    logStep("Banco de dados atualizado com sucesso", { 
-      isActive: isActive, 
-      status: subscriptionStatus
-    });
     
     const responseData = {
       subscription_status: subscriptionStatus,

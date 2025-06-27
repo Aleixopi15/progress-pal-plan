@@ -10,8 +10,6 @@ import {
   Clock,
   PieChart,
   Activity,
-  FileText,
-  HelpCircle,
 } from "lucide-react";
 
 import {
@@ -68,11 +66,6 @@ const items = [
     title: "Simulados",
     url: "/app/simulados",
     icon: PieChart,
-  },
-  {
-    title: "Questões ENEM",
-    url: "/app/enem-questions",
-    icon: HelpCircle,
   },
 ];
 

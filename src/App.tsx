@@ -24,7 +24,6 @@ import Profile from "./pages/Profile";
 import Progress from "./pages/Progress";
 import Activity from "./pages/Activity";
 import Simulados from "./pages/Simulados";
-import EnemQuestions from "./pages/EnemQuestions";
 import NotFound from "./pages/NotFound";
 import HomePage from "./pages/HomePage";
 
@@ -66,7 +65,6 @@ function App() {
                       <Route path="progress" element={<Progress />} />
                       <Route path="activity" element={<Activity />} />
                       <Route path="simulados" element={<Simulados />} />
-                      <Route path="enem-questions" element={<EnemQuestions />} />
                     </Route>
                     {/* Rotas de compatibilidade para URLs antigas */}
                     <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
@@ -79,7 +77,6 @@ function App() {
                     <Route path="/progress" element={<DashboardLayout><Progress /></DashboardLayout>} />
                     <Route path="/activity" element={<DashboardLayout><Activity /></DashboardLayout>} />
                     <Route path="/simulados" element={<DashboardLayout><Simulados /></DashboardLayout>} />
-                    <Route path="/enem-questions" element={<DashboardLayout><EnemQuestions /></DashboardLayout>} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </SidebarProvider>
