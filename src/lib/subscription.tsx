@@ -76,7 +76,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
           stripe_customer_id: subscriptionInfo.stripe_customer_id || null,
           current_period_start: subscriptionInfo.current_period_start || null,
           current_period_end: subscriptionInfo.current_period_end || null,
-          is_active: Boolean(subscriptionInfo.is_active) // Garantir que seja boolean
+          is_active: Boolean(subscriptionInfo.is_active)
         };
         
         console.log('checkSubscription - Definindo dados validados da assinatura:', validatedData);
@@ -154,14 +154,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     }
   }, [user, session]);
 
-  // Verificar assinatura periodicamente (a cada 2 minutos) - reduzido para evitar muitas chamadas
+  // Verificar assinatura periodicamente (a cada 30 segundos) - só quando necessário
   useEffect(() => {
     if (!user || !session) return;
     
     const interval = setInterval(() => {
       console.log('SubscriptionProvider - Verificação periódica de assinatura');
       checkSubscription();
-    }, 2 * 60 * 1000); // 2 minutos
+    }, 30 * 1000); // 30 segundos
     
     return () => clearInterval(interval);
   }, [user, session]);

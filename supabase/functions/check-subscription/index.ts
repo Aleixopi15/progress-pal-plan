@@ -52,20 +52,49 @@ serve(async (req) => {
     if (customers.data.length === 0) {
       logStep("Nenhum cliente encontrado, atualizando estado não assinado");
       
-      // Atualizar ou criar registro na tabela user_subscriptions
-      const { error: upsertError } = await supabaseClient.from("user_subscriptions").upsert({
-        user_id: user.id,
-        subscription_status: "inactive",
-        is_active: false,
-        stripe_customer_id: null,
-        current_period_start: null,
-        current_period_end: null,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "user_id" });
+      // Verificar se registro já existe
+      const { data: existingRecord } = await supabaseClient
+        .from("user_subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
 
-      if (upsertError) {
-        logStep("Erro ao atualizar banco (usuário sem cliente)", { error: upsertError });
-        throw new Error(`Erro ao atualizar banco: ${upsertError.message}`);
+      if (existingRecord) {
+        // Atualizar registro existente
+        const { error: updateError } = await supabaseClient
+          .from("user_subscriptions")
+          .update({
+            subscription_status: "inactive",
+            is_active: false,
+            stripe_customer_id: null,
+            current_period_start: null,
+            current_period_end: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", user.id);
+
+        if (updateError) {
+          logStep("Erro ao atualizar registro existente", { error: updateError });
+          throw new Error(`Erro ao atualizar banco: ${updateError.message}`);
+        }
+      } else {
+        // Inserir novo registro
+        const { error: insertError } = await supabaseClient
+          .from("user_subscriptions")
+          .insert({
+            user_id: user.id,
+            subscription_status: "inactive",
+            is_active: false,
+            stripe_customer_id: null,
+            current_period_start: null,
+            current_period_end: null,
+            updated_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          logStep("Erro ao inserir novo registro", { error: insertError });
+          throw new Error(`Erro ao inserir banco: ${insertError.message}`);
+        }
       }
       
       return new Response(JSON.stringify({ 
@@ -131,26 +160,49 @@ serve(async (req) => {
       }
     }
     
-    // Dados para atualização - garantindo tipos corretos
+    // Dados para atualização
     const updateData = {
-      user_id: user.id,
       stripe_customer_id: customerId,
       subscription_status: subscriptionStatus,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      is_active: isActive, // Garantir que seja boolean
+      is_active: isActive,
       updated_at: new Date().toISOString()
     };
 
     logStep("Preparando atualização do banco", updateData);
 
-    const { error: upsertError } = await supabaseClient
+    // Verificar se registro já existe
+    const { data: existingRecord } = await supabaseClient
       .from("user_subscriptions")
-      .upsert(updateData, { onConflict: "user_id" });
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
 
-    if (upsertError) {
-      logStep("Erro ao atualizar banco de dados", { error: upsertError });
-      throw new Error(`Erro ao atualizar banco: ${upsertError.message}`);
+    if (existingRecord) {
+      // Atualizar registro existente
+      const { error: updateError } = await supabaseClient
+        .from("user_subscriptions")
+        .update(updateData)
+        .eq("user_id", user.id);
+
+      if (updateError) {
+        logStep("Erro ao atualizar banco de dados", { error: updateError });
+        throw new Error(`Erro ao atualizar banco: ${updateError.message}`);
+      }
+    } else {
+      // Inserir novo registro
+      const { error: insertError } = await supabaseClient
+        .from("user_subscriptions")
+        .insert({
+          user_id: user.id,
+          ...updateData
+        });
+
+      if (insertError) {
+        logStep("Erro ao inserir no banco de dados", { error: insertError });
+        throw new Error(`Erro ao inserir banco: ${insertError.message}`);
+      }
     }
 
     logStep("Banco de dados atualizado com sucesso", { 
