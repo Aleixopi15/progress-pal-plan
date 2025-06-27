@@ -56,8 +56,12 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error("Erro ao verificar assinatura:", error);
-        // Em caso de erro, assumir que não tem assinatura ativa para não bloquear o usuário
-        setSubscriptionData({ ...initialSubscriptionData, subscription_status: "inactive" });
+        // Em caso de erro, ser permissivo e não bloquear
+        setSubscriptionData({ 
+          ...initialSubscriptionData, 
+          subscription_status: "error",
+          is_active: true // Ser permissivo em caso de erro
+        });
         return;
       }
 
@@ -78,13 +82,22 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         console.log('checkSubscription - Definindo dados validados da assinatura:', validatedData);
         setSubscriptionData(validatedData);
       } else {
-        console.log('checkSubscription - Dados inválidos retornados, usando estado inicial');
-        setSubscriptionData(initialSubscriptionData);
+        console.log('checkSubscription - Dados inválidos retornados, sendo permissivo');
+        // Ser permissivo se não conseguimos validar
+        setSubscriptionData({
+          ...initialSubscriptionData,
+          subscription_status: "error",
+          is_active: true
+        });
       }
     } catch (error) {
       console.error("Erro ao verificar assinatura:", error);
-      // Em caso de erro, não bloquear o usuário
-      setSubscriptionData({ ...initialSubscriptionData, subscription_status: "inactive" });
+      // Em caso de erro, ser permissivo
+      setSubscriptionData({ 
+        ...initialSubscriptionData, 
+        subscription_status: "error",
+        is_active: true 
+      });
     } finally {
       setLoading(false);
     }
@@ -135,16 +148,27 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   };
 
   // Verificar assinatura ao carregar o componente e quando o usuário mudar
+  // Usar referência estável para evitar múltiplas chamadas
   useEffect(() => {
-    console.log('SubscriptionProvider useEffect - Usuario mudou:', user?.id);
-    if (user && session) {
-      checkSubscription();
-    } else {
-      console.log('SubscriptionProvider - Sem usuário/sessão, resetando dados');
-      setSubscriptionData(initialSubscriptionData);
-      setLoading(false);
-    }
-  }, [user, session]);
+    let isMounted = true;
+    
+    const verifySubscription = async () => {
+      console.log('SubscriptionProvider useEffect - Usuario mudou:', user?.id);
+      if (user && session && isMounted) {
+        await checkSubscription();
+      } else if (!user && !session && isMounted) {
+        console.log('SubscriptionProvider - Sem usuário/sessão, resetando dados');
+        setSubscriptionData(initialSubscriptionData);
+        setLoading(false);
+      }
+    };
+
+    verifySubscription();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, session?.access_token]);
 
   console.log('SubscriptionProvider - Estado atual:', { 
     subscriptionData, 

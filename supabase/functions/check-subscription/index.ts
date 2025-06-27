@@ -47,10 +47,12 @@ serve(async (req) => {
     logStep("Usuário autenticado", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    
+    // Buscar cliente no Stripe
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("Nenhum cliente encontrado, retornando estado inativo");
+      logStep("Nenhum cliente encontrado no Stripe");
       return new Response(JSON.stringify({ 
         subscription_status: "inactive",
         stripe_customer_id: null,
@@ -66,33 +68,40 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     logStep("Cliente Stripe encontrado", { customerId });
 
-    // Buscar assinaturas ativas
-    const activeSubscriptions = await stripe.subscriptions.list({
+    // Buscar todas as assinaturas (ativas e outras)
+    const allSubscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      limit: 10,
     });
+
+    logStep("Total de assinaturas encontradas", { count: allSubscriptions.data.length });
+
+    // Verificar se há assinatura ativa
+    const activeSubscription = allSubscriptions.data.find(sub => 
+      sub.status === "active" || sub.status === "trialing"
+    );
     
     let subscriptionStatus = "inactive";
     let currentPeriodStart = null;
     let currentPeriodEnd = null;
     let isActive = false;
     
-    if (activeSubscriptions.data.length > 0) {
-      const subscription = activeSubscriptions.data[0];
+    if (activeSubscription) {
       subscriptionStatus = "active";
       isActive = true;
-      currentPeriodStart = new Date(subscription.current_period_start * 1000).toISOString();
-      currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      currentPeriodStart = new Date(activeSubscription.current_period_start * 1000).toISOString();
+      currentPeriodEnd = new Date(activeSubscription.current_period_end * 1000).toISOString();
       
       logStep("Assinatura ativa encontrada", { 
-        subscriptionId: subscription.id, 
+        subscriptionId: activeSubscription.id, 
+        status: activeSubscription.status,
         startDate: currentPeriodStart,
-        endDate: currentPeriodEnd,
-        status: subscription.status
+        endDate: currentPeriodEnd
       });
     } else {
-      logStep("Nenhuma assinatura ativa encontrada");
+      logStep("Nenhuma assinatura ativa encontrada", {
+        statuses: allSubscriptions.data.map(sub => ({ id: sub.id, status: sub.status }))
+      });
     }
     
     const responseData = {
@@ -113,13 +122,17 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERRO em check-subscription", { message: errorMessage, stack: error instanceof Error ? error.stack : undefined });
     
+    // Em caso de erro, retornar erro mas não bloquear completamente
     return new Response(JSON.stringify({ 
       error: errorMessage,
       subscription_status: "error",
+      stripe_customer_id: null,
+      current_period_start: null,
+      current_period_end: null,
       is_active: false 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 200, // Mudando para 200 para não causar erro no frontend
     });
   }
 });

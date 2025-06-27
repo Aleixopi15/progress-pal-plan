@@ -21,10 +21,11 @@ export function RequireSubscription({
     console.log('RequireSubscription - Dados da assinatura:', subscriptionData);
     console.log('RequireSubscription - Carregando:', loading);
     
-    // Só redirecionar se não estiver carregando e definitivamente não tiver assinatura
-    if (!loading && subscriptionData.subscription_status !== "error") {
-      // Ser mais permissivo - só bloquear se explicitamente inativo
-      if (subscriptionData.subscription_status === "inactive" && !subscriptionData.is_active) {
+    // Só redirecionar se não estiver carregando e explicitamente inativo
+    if (!loading) {
+      // Só bloquear se status for explicitamente "inactive" e is_active for false
+      // Em caso de erro ou dados indefinidos, permitir acesso
+      if (subscriptionData.subscription_status === "inactive" && subscriptionData.is_active === false) {
         console.log('RequireSubscription - Redirecionando para configurações devido a assinatura inativa');
         toast({
           title: "Assinatura requerida",
@@ -34,7 +35,7 @@ export function RequireSubscription({
         navigate(redirectTo);
       }
     }
-  }, [subscriptionData.is_active, subscriptionData.subscription_status, loading, navigate, redirectTo]);
+  }, [subscriptionData, loading, navigate, redirectTo]);
 
   console.log('RequireSubscription - Estado atual:', { 
     loading, 
@@ -51,12 +52,23 @@ export function RequireSubscription({
     );
   }
 
-  // Se houver erro ou status ativo, permitir acesso
-  if (subscriptionData.subscription_status === "error" || subscriptionData.is_active || subscriptionData.subscription_status === "active") {
+  // Permitir acesso se:
+  // 1. Status é "active" ou "error" 
+  // 2. is_active é true
+  // 3. Em caso de dúvida, permitir acesso (ser permissivo)
+  const shouldAllowAccess = 
+    subscriptionData.subscription_status === "active" ||
+    subscriptionData.subscription_status === "error" ||
+    subscriptionData.is_active === true ||
+    // Se não temos dados definidos, permitir acesso
+    !subscriptionData.subscription_status;
+
+  if (shouldAllowAccess) {
     console.log('RequireSubscription - Permitindo acesso');
     return <>{children}</>;
   }
 
   // Só bloquear se definitivamente inativo
-  return subscriptionData.subscription_status === "inactive" && !subscriptionData.is_active ? null : <>{children}</>;
+  console.log('RequireSubscription - Bloqueando acesso');
+  return null;
 }
