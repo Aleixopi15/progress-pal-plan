@@ -47,10 +47,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string, nome: string, sobrenome: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             nome,
             sobrenome
@@ -59,10 +60,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
       
       if (error) throw error;
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Entre com suas credenciais para começar a estudar.",
-      });
+      
+      if (data.user && !data.session) {
+        toast({
+          title: "Verifique seu email",
+          description: "Enviamos um link de confirmação para seu email.",
+        });
+      } else {
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao StudyPlan!",
+        });
+      }
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);
       toast({
