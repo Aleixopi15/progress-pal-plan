@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { SubjectProgress } from "@/components/dashboard/SubjectProgress";
-import { StudyTasks } from "@/components/dashboard/StudyTasks";
+
 import { NextStudySessions } from "@/components/dashboard/NextStudySessions";
 import { StudyChart } from "@/components/dashboard/StudyChart";
 import { QuestionsStats } from "@/components/dashboard/QuestionsStats";
@@ -446,8 +446,6 @@ export default function Index() {
         <NextStudySessions sessions={sessions} onViewDetails={handleViewSessionDetails} />
         <SubjectProgress />
       </div>
-
-      <StudyTasks tasks={tasks} />
 
       <SessionDetailDialog
         session={selectedSession}

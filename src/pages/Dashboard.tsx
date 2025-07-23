@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [totalStudyMinutes, setTotalStudyMinutes] = useState(0);
   const [weeklyStudyMinutes, setWeeklyStudyMinutes] = useState(0);
+  const [totalSubjects, setTotalSubjects] = useState(0);
   const [dailyTarget, setDailyTarget] = useState(360); // 6 hours in minutes
   const [weeklyTarget, setWeeklyTarget] = useState(2400); // 40 hours in minutes
   const [daysUntilExam, setDaysUntilExam] = useState<number | null>(null);
@@ -155,6 +156,14 @@ export default function Dashboard() {
       
       setChartData(chartDataArray);
       
+      // Fetch subjects count
+      const { data: subjects } = await supabase
+        .from('subjects')
+        .select('id')
+        .eq('user_id', user?.id);
+      
+      setTotalSubjects(subjects?.length || 0);
+      
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast({
@@ -247,8 +256,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           title="Horas Estudadas Total"
           value={formatMinutesToHoursAndMinutes(totalStudyMinutes)}
@@ -264,15 +272,9 @@ export default function Dashboard() {
         />
         <StatCard
           title="Total de Matérias"
-          value="8"
+          value={totalSubjects.toString()}
           icon={<BookOpen className="h-5 w-5" />}
-          description="2 matérias em dia"
-        />
-        <StatCard
-          title="Sequência"
-          value="7 dias"
-          icon={<Award className="h-5 w-5" />}
-          description="Melhor: 14 dias"
+          description={`${totalSubjects} matérias cadastradas`}
         />
       </div>
 
@@ -291,8 +293,8 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <div className="lg:col-span-1">
           <DailyGoalsCard />
         </div>
         <div>
